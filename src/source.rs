@@ -1,6 +1,6 @@
 use crate::{
-    message::detail::MessageList, message::Message, publisher::Publisher, router::ConcreteRouter,
-    router::Router,
+    error::SourceContextError, message::detail::MessageList, message::Message,
+    publisher::Publisher, router::ConcreteRouter, router::Router,
 };
 use ::async_trait::async_trait;
 use ::std::{any::TypeId, collections::HashMap, sync::Arc};
@@ -14,7 +14,7 @@ impl SourceContext {
         SourceContext { routers }
     }
 
-    pub fn publish<P, M>(&mut self, _publisher: &P, message: M)
+    pub fn publish<P, M>(&mut self, _publisher: &P, message: M) -> Result<(), SourceContextError>
     where
         P: Source + Publisher<M>,
         M: Message,
@@ -23,11 +23,16 @@ impl SourceContext {
         let router = self
             .routers
             .get(&type_id)
-            .unwrap()
+            .ok_or(SourceContextError::RouterLookupError)?
             .as_any()
             .downcast_ref::<ConcreteRouter<M>>()
-            .unwrap();
-        router.broadcast(message)
+            .ok_or(SourceContextError::RouterLookupError)?;
+        router
+            .broadcast(message)
+            .map_err(|source| SourceContextError::BroadcastFailure {
+                source: source.into(),
+            })?;
+        Ok(())
     }
 }
 

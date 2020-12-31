@@ -1,5 +1,6 @@
 use crate::{
     actor::ActorId,
+    error::YaafInternalError,
     handler::{HandleContext, Handler},
     message::Message,
     router::{ConcreteRouter, Router, SysRouter, SystemMessage},
@@ -26,12 +27,22 @@ impl<M: Message> Mailbox<M> {
         sys_router: &SysRouter,
         router: &ConcreteRouter<M>,
         publish_routers: HashMap<TypeId, Arc<dyn Router>>,
-    ) -> Receiver<()> {
+    ) -> Result<Receiver<()>, YaafInternalError> {
         let (sys_send, sys_recv) = unbounded_channel();
-        sys_router.subscribe(Some(actor_id), sys_send).await;
+        sys_router
+            .subscribe(Some(actor_id), sys_send)
+            .await
+            .map_err(|source| YaafInternalError::MailboxSystemSubscribeFailure {
+                source: source.into(),
+            })?;
 
         let (send, recv) = unbounded_channel();
-        router.subscribe(Some(actor_id), send).await;
+        router
+            .subscribe(Some(actor_id), send)
+            .await
+            .map_err(|source| YaafInternalError::MailboxSubscribeFailure {
+                source: source.into(),
+            })?;
         let (done, result) = channel(1);
 
         let context = HandleContext::new(publish_routers);
@@ -44,11 +55,10 @@ impl<M: Message> Mailbox<M> {
         };
 
         spawn(mailbox.run());
-        result
+        Ok(result)
     }
 
     async fn run(mut self) {
-        // TODO: handle errors
         loop {
             select! {
                 received = self.sys_recv.recv() => {
@@ -56,7 +66,8 @@ impl<M: Message> Mailbox<M> {
                         Some(message) => {
                             match message {
                                 SystemMessage::Shutdown => {
-                                    self.done.send(()).await.unwrap();
+                                    // TODO: log the error
+                                    let _ = self.done.send(()).await;
                                     break;
                                 }
                             }

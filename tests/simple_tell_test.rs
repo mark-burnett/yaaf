@@ -30,7 +30,7 @@ impl Handler<Communication> for Bob {
 
 #[tokio::test]
 async fn simple_tell() -> Result<(), Box<dyn ::std::error::Error>> {
-    let mut system = System::new().await;
+    let mut system = System::new().await?;
 
     let (send, mut recv) = channel(1);
     let visited = Arc::new(Mutex::new(false));
@@ -39,15 +39,15 @@ async fn simple_tell() -> Result<(), Box<dyn ::std::error::Error>> {
         visited: visited.clone(),
     };
 
-    let bob_addr = system.add_actor(bob).await;
+    let bob_addr = system.add_actor(bob).await?;
     let cloned_address = bob_addr.clone();
 
-    bob_addr.tell(Communication("Hello".into()));
-    cloned_address.tell(Communication("Hello".into()));
+    bob_addr.tell(Communication("Hello".into()))?;
+    cloned_address.tell(Communication("Hello".into()))?;
 
-    recv.recv().await;
-    recv.recv().await;
-    system.shutdown().await;
+    recv.recv().await.unwrap();
+    recv.recv().await.unwrap();
+    system.shutdown().await?;
 
     assert_eq!(true, *visited.lock().await);
 

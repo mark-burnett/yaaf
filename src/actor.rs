@@ -1,4 +1,5 @@
 use crate::{
+    error::AddressError,
     handler::{detail::HandlesList, Handler},
     message::{detail::MessageList, Message},
     router::{ConcreteRouter, Router},
@@ -41,7 +42,7 @@ impl<A: Actor> ActorAddress<A> {
 }
 
 pub trait Tell<M: Message>: Send {
-    fn tell(&self, message: M);
+    fn tell(&self, message: M) -> Result<(), AddressError>;
 }
 
 impl<A, M> Tell<M> for ActorAddress<A>
@@ -49,9 +50,19 @@ where
     A: Actor + Handler<M> + Send + Sync,
     M: Message,
 {
-    fn tell(&self, message: M) {
-        let router = self.routers.get(&TypeId::of::<M>()).unwrap();
-        let r: &ConcreteRouter<M> = router.as_any().downcast_ref().unwrap();
-        r.tell(self.actor_id, message);
+    fn tell(&self, message: M) -> Result<(), AddressError> {
+        let router = self
+            .routers
+            .get(&TypeId::of::<M>())
+            .ok_or(AddressError::RouterLookupError)?;
+        let r: &ConcreteRouter<M> = router
+            .as_any()
+            .downcast_ref()
+            .ok_or(AddressError::RouterLookupError)?;
+        r.tell(self.actor_id, message)
+            .map_err(|source| AddressError::TellFailure {
+                source: source.into(),
+            })?;
+        Ok(())
     }
 }

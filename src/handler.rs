@@ -1,5 +1,6 @@
 use crate::{
     actor::Actor,
+    error::HandleContextError,
     message::Message,
     publisher::Publisher,
     router::{ConcreteRouter, Router},
@@ -16,7 +17,7 @@ impl HandleContext {
         HandleContext { routers }
     }
 
-    pub fn publish<P, M>(&mut self, _publisher: &P, message: M)
+    pub fn publish<P, M>(&mut self, _publisher: &P, message: M) -> Result<(), HandleContextError>
     where
         P: Actor + Publisher<M>,
         M: Message,
@@ -25,11 +26,16 @@ impl HandleContext {
         let router = self
             .routers
             .get(&type_id)
-            .unwrap()
+            .ok_or(HandleContextError::RouterLookupError)?
             .as_any()
             .downcast_ref::<ConcreteRouter<M>>()
-            .unwrap();
-        router.broadcast(message)
+            .ok_or(HandleContextError::RouterLookupError)?;
+        router
+            .broadcast(message)
+            .map_err(|source| HandleContextError::BroadcastFailure {
+                source: source.into(),
+            })?;
+        Ok(())
     }
 }
 
@@ -42,6 +48,7 @@ pub(crate) mod detail {
     use super::*;
     use crate::{
         actor::{Actor, ActorId},
+        error::YaafInternalError,
         mailbox::Mailbox,
         message::{detail::MessageList, Message},
         router::{ConcreteRouter, Router, SysRouter},
@@ -58,7 +65,7 @@ pub(crate) mod detail {
             handle_routers: &HashMap<TypeId, Arc<dyn Router>>,
             publish_routers: &HashMap<TypeId, Arc<dyn Router>>,
             sys_router: &SysRouter,
-        ) -> Vec<Receiver<()>>;
+        ) -> Result<Vec<Receiver<()>>, YaafInternalError>;
     }
 
     macro_rules! start_mailbox {
@@ -66,11 +73,11 @@ pub(crate) mod detail {
             let type_id = TypeId::of::<$head>();
             let router = $handle_routers
                 .get(&type_id)
-                .unwrap()
+                .ok_or(YaafInternalError::RouterLookupFailure)?
                 .as_any()
                 .downcast_ref::<ConcreteRouter<$head>>()
-                .unwrap();
-            $done.push(Mailbox::start($actor.clone(), $actor_id, $sys_router, router, $publish_routers.clone()).await);
+                .ok_or(YaafInternalError::RouterLookupFailure)?;
+            $done.push(Mailbox::start($actor.clone(), $actor_id, $sys_router, router, $publish_routers.clone()).await?);
 
             start_mailbox!($actor, $actor_id, $sys_router, $handle_routers, $publish_routers, $done, $( $tail, )*);
         };
@@ -91,7 +98,7 @@ pub(crate) mod detail {
                     handle_routers: &HashMap<TypeId, Arc<dyn Router>>,
                     publish_routers: &HashMap<TypeId, Arc<dyn Router>>,
                     sys_router: &SysRouter,
-                ) -> Vec<Receiver<()>> {
+                ) -> Result<Vec<Receiver<()>>, YaafInternalError> {
                     let actor = Arc::new(Mutex::new(self));
                     let mut done = Vec::new();
                     start_mailbox!(
@@ -104,7 +111,7 @@ pub(crate) mod detail {
                         $head,
                         $( $tail, )*
                     );
-                    done
+                    Ok(done)
                 }
             }
 

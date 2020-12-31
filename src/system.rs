@@ -1,5 +1,6 @@
 use crate::{
     actor::{Actor, ActorAddress, ActorId},
+    error::SystemError,
     message::detail::MessageList,
     router::{ConcreteRouter, Router, SysRouter, SystemMessage},
     source::{Source, SourceContext, SourceMeta},
@@ -15,13 +16,15 @@ pub struct System {
 }
 
 impl System {
-    pub async fn new() -> Self {
-        System {
+    pub async fn new() -> Result<Self, SystemError> {
+        Ok(System {
             next_id: 0,
             routers: HashMap::new(),
-            sys_router: ConcreteRouter::<SystemMessage>::new_system_router().await,
+            sys_router: ConcreteRouter::<SystemMessage>::new_system_router()
+                .await
+                .map_err(|source| SystemError::CreateError { source })?,
             done: Vec::new(),
-        }
+        })
     }
 
     fn get_id(&mut self) -> ActorId {
@@ -30,10 +33,13 @@ impl System {
         result
     }
 
-    pub async fn add_actor<A: Actor>(&mut self, actor: A) -> ActorAddress<A> {
-        let publish_routers =
-            A::Publishes::setup_routers(&self.sys_router, &mut self.routers).await;
-        let handle_routers = A::Handles::setup_routers(&self.sys_router, &mut self.routers).await;
+    pub async fn add_actor<A: Actor>(&mut self, actor: A) -> Result<ActorAddress<A>, SystemError> {
+        let publish_routers = A::Publishes::setup_routers(&self.sys_router, &mut self.routers)
+            .await
+            .map_err(|source| SystemError::AddActorFailure { source })?;
+        let handle_routers = A::Handles::setup_routers(&self.sys_router, &mut self.routers)
+            .await
+            .map_err(|source| SystemError::AddActorFailure { source })?;
 
         let actor_id = self.get_id();
         self.done.extend(
@@ -44,23 +50,33 @@ impl System {
                     &publish_routers,
                     &self.sys_router,
                 )
-                .await,
+                .await
+                .map_err(|source| SystemError::AddActorFailure { source })?,
         );
 
-        ActorAddress::new(actor_id, handle_routers)
+        Ok(ActorAddress::new(actor_id, handle_routers))
     }
 
-    pub async fn add_source<S: 'static + Source + SourceMeta>(&mut self, source: S) {
-        let publish_routers =
-            S::Publishes::setup_routers(&self.sys_router, &mut self.routers).await;
+    pub async fn add_source<S: 'static + Source + SourceMeta>(
+        &mut self,
+        source: S,
+    ) -> Result<(), SystemError> {
+        let publish_routers = S::Publishes::setup_routers(&self.sys_router, &mut self.routers)
+            .await
+            .map_err(|source| SystemError::AddSourceFailure { source })?;
         let ctx: SourceContext = SourceContext::new(publish_routers);
         spawn(source.run(ctx));
+        Ok(())
     }
 
-    pub async fn shutdown(&mut self) {
-        self.sys_router.broadcast(SystemMessage::Shutdown);
+    pub async fn shutdown(&mut self) -> Result<(), SystemError> {
+        self.sys_router
+            .broadcast(SystemMessage::Shutdown)
+            .map_err(|source| SystemError::ShutdownError { source })?;
         for r in &mut self.done {
-            r.recv().await.unwrap();
+            // TODO: log this error
+            let _ = r.recv().await;
         }
+        Ok(())
     }
 }

@@ -1,5 +1,4 @@
-use crate::actor::ActorId;
-use crate::message::Message;
+use crate::{actor::ActorId, error::YaafInternalError, message::Message};
 use ::dyn_clone::{clone_trait_object, DynClone};
 use ::std::{any::Any, collections::HashMap, fmt::Debug};
 use ::tokio::{
@@ -59,7 +58,7 @@ impl<M: 'static + Message> Router for ConcreteRouter<M> {
 }
 
 impl<M: Message> ConcreteRouter<M> {
-    pub(crate) async fn new_system_router() -> SysRouter {
+    pub(crate) async fn new_system_router() -> Result<SysRouter, YaafInternalError> {
         let (send, recv) = unbounded_channel();
         let (sub_send, sub_recv) = unbounded_channel();
         let (sys_send, sys_recv) = unbounded_channel();
@@ -76,17 +75,26 @@ impl<M: Message> ConcreteRouter<M> {
             sys_recv,
         };
         spawn(router_impl.run());
-        sub_future.await;
+        sub_future
+            .await
+            .map_err(|source| YaafInternalError::CreateRouterFailure {
+                source: source.into(),
+            })?;
 
-        sys_router
+        Ok(sys_router)
     }
 
-    pub(crate) async fn new(sys_router: &SysRouter) -> Self {
+    pub(crate) async fn new(sys_router: &SysRouter) -> Result<Self, YaafInternalError> {
         let (send, recv) = unbounded_channel();
         let (sub_send, sub_recv) = unbounded_channel();
         let (sys_send, sys_recv) = unbounded_channel();
 
-        sys_router.subscribe(None, sys_send).await;
+        sys_router
+            .subscribe(None, sys_send)
+            .await
+            .map_err(|source| YaafInternalError::CreateRouterFailure {
+                source: source.into(),
+            })?;
 
         let router_impl = RouterImpl {
             anonymous_subscribers: Vec::new(),
@@ -97,30 +105,35 @@ impl<M: Message> ConcreteRouter<M> {
         };
         spawn(router_impl.run());
 
-        Self { send, sub_send }
+        Ok(Self { send, sub_send })
     }
 
-    pub(crate) fn broadcast(&self, message: M) {
+    pub(crate) fn broadcast(&self, message: M) -> Result<(), YaafInternalError> {
         self.send.send(Envelope {
             distribution_type: DistributionType::Broadcast,
             message: message,
-        });
+        })?;
+        Ok(())
     }
 
-    // TODO: add error here.
-    pub(crate) fn tell(&self, recipient: ActorId, message: M) {
+    pub(crate) fn tell(&self, recipient: ActorId, message: M) -> Result<(), YaafInternalError> {
         self.send.send(Envelope {
             distribution_type: DistributionType::Direct(recipient),
             message: message,
-        });
+        })?;
+        Ok(())
     }
 
-    // TODO: add error
-    pub(crate) async fn subscribe(&self, recipient: Option<ActorId>, mailbox: UnboundedSender<M>) {
+    pub(crate) async fn subscribe(
+        &self,
+        recipient: Option<ActorId>,
+        mailbox: UnboundedSender<M>,
+    ) -> Result<(), YaafInternalError> {
         let (s, r) = oneshot::channel();
         self.sub_send
-            .send(SubscriptionMessage::Subscribe((recipient, mailbox, s)));
-        r.await.unwrap();
+            .send(SubscriptionMessage::Subscribe((recipient, mailbox, s)))?;
+        r.await?;
+        Ok(())
     }
 }
 
@@ -163,7 +176,8 @@ where
                                         },
                                         None => self.anonymous_subscribers.push(send),
                                     }
-                                    done.send(()).unwrap();
+                                    // TODO: log error
+                                    let _ = done.send(());
                                 },
                             }
                         },
@@ -176,15 +190,19 @@ where
                             match envelope.distribution_type {
                                 DistributionType::Broadcast => {
                                     for (_recipient_id, send) in &self.subscribers {
-                                        // TODO: handle errors
-                                        send.send(envelope.message.clone());
+                                        // TODO: log the error
+                                        let _ = send.send(envelope.message.clone());
                                     }
                                     for send in &self.anonymous_subscribers {
-                                        send.send(envelope.message.clone());
+                                        // TODO: log the error
+                                        let _ = send.send(envelope.message.clone());
                                     }
                                 }
                                 DistributionType::Direct(recipient_id) => {
-                                    self.subscribers.get(&recipient_id).unwrap().send(envelope.message);
+                                    if let Some(subscriber) = self.subscribers.get(&recipient_id) {
+                                        // TODO: log the error, possibly remove subscriber
+                                        let _ = subscriber.send(envelope.message);
+                                    }
                                 }
                             }
                         },

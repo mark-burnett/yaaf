@@ -9,6 +9,7 @@ mod router;
 mod source;
 mod system;
 
+pub mod error;
 pub mod prelude;
 
 pub use crate::actor::ActorAddress;

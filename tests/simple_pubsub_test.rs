@@ -16,7 +16,8 @@ struct Alice;
 #[async_trait]
 impl Source for Alice {
     async fn run(mut self, mut ctx: SourceContext) {
-        ctx.publish::<Alice, Communication>(&self, Communication("hello".into()));
+        ctx.publish::<Alice, Communication>(&self, Communication("hello".into()))
+            .unwrap();
     }
 }
 
@@ -50,7 +51,7 @@ impl Handler<Communication> for Bob {
 
 #[tokio::test]
 async fn simple_pubsub() -> Result<(), Box<dyn ::std::error::Error>> {
-    let mut system = System::new().await;
+    let mut system = System::new().await?;
 
     let alice = Alice;
 
@@ -61,11 +62,11 @@ async fn simple_pubsub() -> Result<(), Box<dyn ::std::error::Error>> {
         visited: visited.clone(),
     };
 
-    system.add_actor(bob).await;
-    system.add_source(alice).await;
+    system.add_actor(bob).await?;
+    system.add_source(alice).await?;
 
     recv.await.unwrap();
-    system.shutdown().await;
+    system.shutdown().await?;
 
     assert_eq!(true, *visited.lock().await);
     Ok(())
