@@ -10,8 +10,8 @@ error[E0599]: no method named `publish` found for mutable reference `&mut yaaf::
   ::: $WORKSPACE/src/context.rs
    |
    | pub struct Context<A> {
-   | --------------------- doesn't satisfy `yaaf::Context<MyActor>: yaaf::PublishContext<_>`
+   | --------------------- doesn't satisfy `yaaf::Context<MyActor>: yaaf::Publish<_>`
    |
    = note: the method `publish` exists but the following trait bounds were not satisfied:
            `MyActor: Publisher<_>`
-           which is required by `yaaf::Context<MyActor>: yaaf::PublishContext<_>`
+           which is required by `yaaf::Context<MyActor>: yaaf::Publish<_>`

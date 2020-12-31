@@ -25,11 +25,11 @@ impl<A> Context<A> {
     }
 }
 
-pub trait PublishContext<M: Message> {
+pub trait Publish<M: Message> {
     fn publish(&mut self, message: M) -> Result<(), ContextError>;
 }
 
-impl<A, M> PublishContext<M> for Context<A>
+impl<A, M> Publish<M> for Context<A>
 where
     A: Publisher<M>,
     M: Message,

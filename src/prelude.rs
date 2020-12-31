@@ -1,6 +1,6 @@
 pub use crate::{
     actor::{Actor, Tell},
-    context::{Context, PublishContext},
+    context::{Context, Publish},
     handler::Handler,
     source::Source,
     system::System,
