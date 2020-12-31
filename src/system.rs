@@ -30,7 +30,7 @@ impl System {
         result
     }
 
-    pub async fn add_actor<'a, A: 'a + Actor>(&'a mut self, actor: A) -> ActorAddress<'a, A> {
+    pub async fn add_actor<A: Actor>(&mut self, actor: A) -> ActorAddress<A> {
         let publish_routers =
             A::Publishes::setup_routers(&self.sys_router, &mut self.routers).await;
         let handle_routers = A::Handles::setup_routers(&self.sys_router, &mut self.routers).await;

@@ -12,7 +12,7 @@ use ::yaaf::prelude::*;
 #[derive(Clone)]
 struct MyMessage;
 
-#[derive(Actor, Clone)]
+#[derive(Actor)]
 struct MyActor;
 
 #[async_trait]

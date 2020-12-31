@@ -9,7 +9,7 @@ use ::yaaf::prelude::*;
 #[derive(Clone)]
 struct Communication(String);
 
-#[derive(Actor, Clone)]
+#[derive(Actor)]
 #[handle(Communication)]
 struct Bob {
     done: Sender<()>,

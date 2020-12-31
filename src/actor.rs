@@ -13,14 +13,23 @@ pub trait Actor: HandlesList<<Self as Actor>::Handles> {
 #[derive(Copy, Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct ActorId(pub(crate) u32);
 
-#[derive(Clone)]
-pub struct ActorAddress<'a, A: Actor> {
+pub struct ActorAddress<A: Actor> {
     actor_id: ActorId,
     routers: HashMap<TypeId, Arc<dyn Router>>,
-    _actor: PhantomData<&'a A>,
+    _actor: PhantomData<A>,
 }
 
-impl<'a, A: Actor> ActorAddress<'a, A> {
+impl<A: Actor> Clone for ActorAddress<A> {
+    fn clone(&self) -> Self {
+        ActorAddress {
+            actor_id: self.actor_id,
+            routers: self.routers.clone(),
+            _actor: PhantomData,
+        }
+    }
+}
+
+impl<A: Actor> ActorAddress<A> {
     pub(crate) fn new(actor_id: ActorId, routers: HashMap<TypeId, Arc<dyn Router>>) -> Self {
         ActorAddress {
             actor_id,
@@ -34,7 +43,7 @@ pub trait Tell<M: Message>: Send {
     fn tell(&self, message: M);
 }
 
-impl<'a, A, M> Tell<M> for ActorAddress<'a, A>
+impl<A, M> Tell<M> for ActorAddress<A>
 where
     A: Actor + Handler<M> + Send + Sync,
     M: Message,
