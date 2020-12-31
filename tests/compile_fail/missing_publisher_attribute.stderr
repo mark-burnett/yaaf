@@ -1,0 +1,5 @@
+error[E0277]: the trait bound `MyActor: Publisher<_>` is not satisfied
+  --> $DIR/missing_publisher_attribute.rs:16:13
+   |
+16 |         ctx.publish(self, InvalidMessage);
+   |             ^^^^^^^ the trait `Publisher<_>` is not implemented for `MyActor`
