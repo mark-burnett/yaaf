@@ -1,3 +1,5 @@
+//! Useful imports for most use-cases.
+
 pub use crate::{
     actor::{Actor, Tell},
     context::{Context, Publish},

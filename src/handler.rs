@@ -1,6 +1,7 @@
 use crate::{actor::Actor, context::Context, message::Message};
 use ::async_trait::async_trait;
 
+#[doc(hidden)]
 pub trait HandlerRegistered<M: Message> {}
 
 #[async_trait]

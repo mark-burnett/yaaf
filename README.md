@@ -13,27 +13,29 @@ use ::yaaf::prelude::*;
 struct MyMessage;
 
 #[derive(Actor)]
+#[handle(MyMessage)]
 struct MyActor;
 
 #[async_trait]
-impl Handler<Communication> for Bob {
-    async fn handle(&mut self, _ctx: &mut Context, message: MyMessage) {
+impl Handler<MyMessage> for MyActor {
+    async fn handle(&mut self, _ctx: &mut Context<Self>, _message: MyMessage) {
         println!("Received message");
     }
 }
 
 #[tokio::main]
-async fn main() {
-    let mut system = System::new().await;
+async fn main() -> Result<(), Box<dyn ::std::error::Error>> {
+    let mut system = System::new().await?;
 
     let actor = MyActor;
 
-    let addr = system.add_actor(actor).await;
+    let addr = system.add_actor(actor).await?;
     addr.tell(MyMessage);
 
     sleep(Duration::from_millis(100));
 
-    system.shutdown().await;
+    system.shutdown().await?;
+    Ok(())
 }
 ```
 

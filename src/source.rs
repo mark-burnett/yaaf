@@ -1,6 +1,7 @@
 use crate::{context::Context, message::detail::MessageList};
 use ::async_trait::async_trait;
 
+#[doc(hidden)]
 pub trait SourceMeta {
     type Publishes: MessageList;
 }
