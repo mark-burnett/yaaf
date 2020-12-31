@@ -1,0 +1,79 @@
+warning: unused `std::result::Result` that must be used
+   --> $DIR/router.rs:101:9
+    |
+101 | /         self.send.send(Envelope {
+102 | |             distribution_type: DistributionType::Broadcast,
+103 | |             message: message,
+104 | |         });
+    | |___________^
+    |
+    = note: `#[warn(unused_must_use)]` on by default
+    = note: this `Result` may be an `Err` variant, which should be handled
+
+warning: unused `std::result::Result` that must be used
+   --> $DIR/router.rs:109:9
+    |
+109 | /         self.send.send(Envelope {
+110 | |             distribution_type: DistributionType::Direct(recipient),
+111 | |             message: message,
+112 | |         });
+    | |___________^
+    |
+    = note: this `Result` may be an `Err` variant, which should be handled
+
+warning: unused `std::result::Result` that must be used
+   --> $DIR/router.rs:118:9
+    |
+118 | /         self.sub_send
+119 | |             .send(SubscriptionMessage::Subscribe((recipient, mailbox, s)));
+    | |___________________________________________________________________________^
+    |
+    = note: this `Result` may be an `Err` variant, which should be handled
+
+warning: unused `std::result::Result` that must be used
+   --> $DIR/router.rs:177:41
+    |
+177 | ...                   send.send(envelope.message.clone());
+    |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: this `Result` may be an `Err` variant, which should be handled
+
+warning: unused `std::result::Result` that must be used
+   --> $DIR/router.rs:180:41
+    |
+180 | ...                   send.send(envelope.message.clone());
+    |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: this `Result` may be an `Err` variant, which should be handled
+
+warning: unused `std::result::Result` that must be used
+   --> $DIR/router.rs:184:37
+    |
+184 | ...                   self.subscribers.get(&recipient_id).unwrap().send(envelope.message);
+    |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: this `Result` may be an `Err` variant, which should be handled
+
+warning: 6 warnings emitted
+
+warning: unused import: `::async_trait::async_trait`
+ --> $DIR/missing_handler.rs:1:5
+  |
+1 | use ::async_trait::async_trait;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` on by default
+
+error[E0277]: the trait bound `Bob: Handler<Communication>` is not satisfied
+  --> $DIR/missing_handler.rs:12:10
+   |
+12 | #[derive(Actor)]
+   |          ^^^^^ the trait `Handler<Communication>` is not implemented for `Bob`
+   |
+  ::: $WORKSPACE/src/actor.rs
+   |
+   | pub trait Actor: HandlesList<<Self as Actor>::Handles> {
+   |                  ------------------------------------- required by this bound in `yaaf::Actor`
+   |
+   = note: required because of the requirements on the impl of `yaaf::handler::detail::HandlesList<(Communication,)>` for `Bob`
+   = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
