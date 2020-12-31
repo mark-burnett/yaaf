@@ -1,40 +1,32 @@
 warning: unused `std::result::Result` that must be used
-   --> $DIR/router.rs:101:9
+   --> $DIR/router.rs:104:9
     |
-101 | /         self.send.send(Envelope {
-102 | |             distribution_type: DistributionType::Broadcast,
-103 | |             message: message,
-104 | |         });
+104 | /         self.send.send(Envelope {
+105 | |             distribution_type: DistributionType::Broadcast,
+106 | |             message: message,
+107 | |         });
     | |___________^
     |
     = note: `#[warn(unused_must_use)]` on by default
     = note: this `Result` may be an `Err` variant, which should be handled
 
 warning: unused `std::result::Result` that must be used
-   --> $DIR/router.rs:109:9
+   --> $DIR/router.rs:112:9
     |
-109 | /         self.send.send(Envelope {
-110 | |             distribution_type: DistributionType::Direct(recipient),
-111 | |             message: message,
-112 | |         });
+112 | /         self.send.send(Envelope {
+113 | |             distribution_type: DistributionType::Direct(recipient),
+114 | |             message: message,
+115 | |         });
     | |___________^
     |
     = note: this `Result` may be an `Err` variant, which should be handled
 
 warning: unused `std::result::Result` that must be used
-   --> $DIR/router.rs:118:9
+   --> $DIR/router.rs:121:9
     |
-118 | /         self.sub_send
-119 | |             .send(SubscriptionMessage::Subscribe((recipient, mailbox, s)));
+121 | /         self.sub_send
+122 | |             .send(SubscriptionMessage::Subscribe((recipient, mailbox, s)));
     | |___________________________________________________________________________^
-    |
-    = note: this `Result` may be an `Err` variant, which should be handled
-
-warning: unused `std::result::Result` that must be used
-   --> $DIR/router.rs:177:41
-    |
-177 | ...                   send.send(envelope.message.clone());
-    |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     |
     = note: this `Result` may be an `Err` variant, which should be handled
 
@@ -47,33 +39,33 @@ warning: unused `std::result::Result` that must be used
     = note: this `Result` may be an `Err` variant, which should be handled
 
 warning: unused `std::result::Result` that must be used
-   --> $DIR/router.rs:184:37
+   --> $DIR/router.rs:183:41
     |
-184 | ...                   self.subscribers.get(&recipient_id).unwrap().send(envelope.message);
+183 | ...                   send.send(envelope.message.clone());
+    |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: this `Result` may be an `Err` variant, which should be handled
+
+warning: unused `std::result::Result` that must be used
+   --> $DIR/router.rs:187:37
+    |
+187 | ...                   self.subscribers.get(&recipient_id).unwrap().send(envelope.message);
     |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     |
     = note: this `Result` may be an `Err` variant, which should be handled
 
 warning: 6 warnings emitted
 
-warning: unused import: `::async_trait::async_trait`
- --> $DIR/missing_handler.rs:1:5
-  |
-1 | use ::async_trait::async_trait;
-  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^
-  |
-  = note: `#[warn(unused_imports)]` on by default
-
 error[E0277]: the trait bound `Bob: Handler<Communication>` is not satisfied
-  --> $DIR/missing_handler.rs:12:10
-   |
-12 | #[derive(Actor)]
-   |          ^^^^^ the trait `Handler<Communication>` is not implemented for `Bob`
-   |
-  ::: $WORKSPACE/src/actor.rs
-   |
-   | pub trait Actor: HandlesList<<Self as Actor>::Handles> {
-   |                  ------------------------------------- required by this bound in `yaaf::Actor`
-   |
-   = note: required because of the requirements on the impl of `yaaf::handler::detail::HandlesList<(Communication,)>` for `Bob`
-   = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+ --> $DIR/missing_handler.rs:6:10
+  |
+6 | #[derive(Actor)]
+  |          ^^^^^ the trait `Handler<Communication>` is not implemented for `Bob`
+  |
+ ::: $WORKSPACE/src/actor.rs
+  |
+  | pub trait Actor: HandlesList<<Self as Actor>::Handles> {
+  |                  ------------------------------------- required by this bound in `yaaf::Actor`
+  |
+  = note: required because of the requirements on the impl of `yaaf::handler::detail::HandlesList<(Communication,)>` for `Bob`
+  = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
