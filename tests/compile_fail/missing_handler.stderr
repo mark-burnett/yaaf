@@ -1,13 +1,13 @@
-error[E0277]: the trait bound `Bob: Handler<Communication>` is not satisfied
+error[E0277]: the trait bound `MyActor: Handler<MyMessage>` is not satisfied
  --> $DIR/missing_handler.rs:6:10
   |
 6 | #[derive(Actor)]
-  |          ^^^^^ the trait `Handler<Communication>` is not implemented for `Bob`
+  |          ^^^^^ the trait `Handler<MyMessage>` is not implemented for `MyActor`
   |
  ::: $WORKSPACE/src/actor.rs
   |
   | pub trait Actor: HandlesList<<Self as Actor>::Handles> {
   |                  ------------------------------------- required by this bound in `yaaf::Actor`
   |
-  = note: required because of the requirements on the impl of `yaaf::handler::detail::HandlesList<(Communication,)>` for `Bob`
+  = note: required because of the requirements on the impl of `yaaf::handler::detail::HandlesList<(MyMessage,)>` for `MyActor`
   = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)

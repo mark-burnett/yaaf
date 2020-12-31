@@ -1,10 +1,10 @@
 use yaaf::prelude::*;
 
 #[derive(Clone, Debug)]
-struct Communication(String);
+struct MyMessage;
 
 #[derive(Actor)]
-#[handle(Communication)]
-struct Bob;
+#[handle(MyMessage)]
+struct MyActor;
 
 fn main() {}
