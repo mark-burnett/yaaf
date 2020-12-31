@@ -13,6 +13,7 @@ pub mod error;
 pub mod prelude;
 
 pub use crate::actor::ActorAddress;
+pub use crate::handler::HandlerRegistered;
 pub use crate::message::Message;
 pub use crate::prelude::*;
 pub use crate::publisher::Publisher;

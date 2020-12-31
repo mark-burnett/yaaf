@@ -24,6 +24,9 @@ fn process_actor_derive(input: DeriveInput) -> TokenStream {
             type Publishes = (#(#publishes, )*);
             type Handles = (#(#handles, )*);
         }
+        #(
+        impl ::yaaf::HandlerRegistered<#handles> for #name {}
+        )*
 
         #(
         impl ::yaaf::Publisher<#publishes> for #name {}

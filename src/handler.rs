@@ -39,8 +39,10 @@ impl HandleContext {
     }
 }
 
+pub trait HandlerRegistered<M: Message> {}
+
 #[async_trait]
-pub trait Handler<M: Message>: Send {
+pub trait Handler<M: Message>: HandlerRegistered<M> + Send {
     async fn handle(&mut self, ctx: &mut HandleContext, message: M);
 }
 

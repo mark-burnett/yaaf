@@ -1,0 +1,13 @@
+error[E0277]: the trait bound `MyActor: HandlerRegistered<InvalidMessage>` is not satisfied
+  --> $DIR/missing_handler_attribute.rs:20:6
+   |
+20 | impl Handler<InvalidMessage> for MyActor {
+   |      ^^^^^^^^^^^^^^^^^^^^^^^ the trait `HandlerRegistered<InvalidMessage>` is not implemented for `MyActor`
+   |
+  ::: $WORKSPACE/src/handler.rs
+   |
+   | pub trait Handler<M: Message>: HandlerRegistered<M> + Send {
+   |                                -------------------- required by this bound in `yaaf::Handler`
+   |
+   = help: the following implementations were found:
+             <MyActor as HandlerRegistered<ValidMessage>>

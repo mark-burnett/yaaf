@@ -10,3 +10,14 @@ error[E0277]: the trait bound `MyActor: yaaf::handler::detail::HandlesList<()>` 
   |                  ------------------------------------- required by this bound in `yaaf::Actor`
   |
   = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0277]: the trait bound `MyActor: HandlerRegistered<MyMessage>` is not satisfied
+  --> $DIR/no_handler_attribute.rs:10:6
+   |
+10 | impl Handler<MyMessage> for MyActor {
+   |      ^^^^^^^^^^^^^^^^^^ the trait `HandlerRegistered<MyMessage>` is not implemented for `MyActor`
+   |
+  ::: $WORKSPACE/src/handler.rs
+   |
+   | pub trait Handler<M: Message>: HandlerRegistered<M> + Send {
+   |                                -------------------- required by this bound in `yaaf::Handler`
