@@ -31,7 +31,7 @@ impl<A: 'static + Actor + Handler<M>, M: Message> Mailbox<A, M> {
     ) -> Result<Receiver<()>, YaafInternalError> {
         let (sys_send, sys_recv) = unbounded_channel();
         sys_router
-            .subscribe(Some(actor_id), sys_send)
+            .subscribe(None, sys_send)
             .await
             .map_err(|source| YaafInternalError::MailboxSystemSubscribeFailure {
                 source: source.into(),
