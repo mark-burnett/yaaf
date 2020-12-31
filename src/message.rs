@@ -1,5 +1,7 @@
-pub trait Message: 'static + Clone + Send {}
-impl<M> Message for M where M: 'static + Clone + Send {}
+use ::std::fmt::Debug;
+
+pub trait Message: 'static + Clone + Debug + Send {}
+impl<M> Message for M where M: 'static + Clone + Debug + Send {}
 
 pub(crate) mod detail {
     use super::*;

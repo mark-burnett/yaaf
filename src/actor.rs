@@ -10,13 +10,14 @@ pub trait Actor: HandlesList<<Self as Actor>::Handles> {
     type Handles: MessageList;
 }
 
-#[derive(Copy, Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct ActorId(pub(crate) u32);
 
+#[derive(Debug)]
 pub struct ActorAddress<A: Actor> {
     actor_id: ActorId,
     routers: HashMap<TypeId, Arc<dyn Router>>,
-    _actor: PhantomData<A>,
+    _actor: PhantomData<Arc<A>>,
 }
 
 impl<A: Actor> Clone for ActorAddress<A> {

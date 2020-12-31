@@ -6,7 +6,7 @@ use ::tokio::sync::{
 };
 use ::yaaf::prelude::*;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 struct Communication(String);
 
 #[derive(Actor)]

@@ -9,7 +9,7 @@ use ::std::time::Duration;
 use ::tokio::time::sleep;
 use ::yaaf::prelude::*;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 struct MyMessage;
 
 #[derive(Actor)]

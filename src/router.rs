@@ -1,7 +1,7 @@
 use crate::actor::ActorId;
 use crate::message::Message;
 use ::dyn_clone::{clone_trait_object, DynClone};
-use ::std::{any::Any, collections::HashMap};
+use ::std::{any::Any, collections::HashMap, fmt::Debug};
 use ::tokio::{
     select, spawn,
     sync::{
@@ -10,22 +10,23 @@ use ::tokio::{
     },
 };
 
+#[derive(Debug)]
 pub(crate) enum SubscriptionMessage<M: Message> {
     Subscribe((Option<ActorId>, UnboundedSender<M>, oneshot::Sender<()>)),
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum SystemMessage {
     Shutdown,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub(crate) enum DistributionType {
     Broadcast,
     Direct(ActorId),
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub(crate) struct Envelope<M>
 where
     M: Message,
@@ -34,7 +35,13 @@ where
     message: M,
 }
 
-#[derive(Clone)]
+pub trait Router: Any + DynClone + Debug + Send + Sync {
+    fn as_any(&self) -> &dyn Any;
+}
+
+clone_trait_object!(Router);
+
+#[derive(Clone, Debug)]
 pub struct ConcreteRouter<M>
 where
     M: 'static + Message,
@@ -45,15 +52,11 @@ where
 
 pub(crate) type SysRouter = ConcreteRouter<SystemMessage>;
 
-pub trait Router: Any + DynClone + Send + Sync {
-    fn as_any(&self) -> &dyn Any;
-}
 impl<M: 'static + Message> Router for ConcreteRouter<M> {
     fn as_any(&self) -> &dyn Any {
         self
     }
 }
-clone_trait_object!(Router);
 
 impl<M: Message> ConcreteRouter<M> {
     pub(crate) async fn new_system_router() -> SysRouter {
