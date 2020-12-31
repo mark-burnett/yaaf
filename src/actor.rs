@@ -41,13 +41,13 @@ impl<A: Actor> ActorAddress<A> {
     }
 }
 
-pub trait Tell<M: Message>: Send {
+pub trait Tell<M: Message> {
     fn tell(&self, message: M) -> Result<(), AddressError>;
 }
 
 impl<A, M> Tell<M> for ActorAddress<A>
 where
-    A: Actor + Handler<M> + Send + Sync,
+    A: Actor + Handler<M>,
     M: Message,
 {
     fn tell(&self, message: M) -> Result<(), AddressError> {

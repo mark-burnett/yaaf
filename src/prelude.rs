@@ -6,4 +6,4 @@ pub use crate::{
     system::System,
 };
 pub use ::async_trait::async_trait;
-pub use yaaf_macros::{Actor, Source};
+pub use ::yaaf_macros::{Actor, Source};
