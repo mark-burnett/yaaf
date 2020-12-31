@@ -16,7 +16,6 @@ impl Handler<ValidMessage> for MyActor {
     }
 }
 
-
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn ::std::error::Error>> {
     let mut system = System::new().await?;
@@ -25,7 +24,7 @@ async fn main() -> Result<(), Box<dyn ::std::error::Error>> {
 
     let address = system.add_actor(actor).await?;
 
-    address.tell(InvalidMessage);
+    address.tell(InvalidMessage)?;
 
     Ok(())
 }

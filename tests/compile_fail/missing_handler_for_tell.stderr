@@ -1,5 +1,5 @@
 error[E0308]: mismatched types
-  --> $DIR/missing_handler_for_tell.rs:28:18
+  --> $DIR/missing_handler_for_tell.rs:27:18
    |
-28 |     address.tell(InvalidMessage);
+27 |     address.tell(InvalidMessage)?;
    |                  ^^^^^^^^^^^^^^ expected struct `ValidMessage`, found struct `InvalidMessage`
