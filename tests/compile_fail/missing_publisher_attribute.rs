@@ -12,8 +12,8 @@ struct MyActor;
 
 #[async_trait]
 impl Handler<ValidMessage> for MyActor {
-    async fn handle(&mut self, ctx: &mut HandleContext, _message: ValidMessage) {
-        ctx.publish(self, InvalidMessage);
+    async fn handle(&mut self, ctx: &mut Context<Self>, _message: ValidMessage) {
+        ctx.publish(InvalidMessage);
     }
 }
 

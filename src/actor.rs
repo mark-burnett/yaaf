@@ -6,7 +6,7 @@ use crate::{
 };
 use ::std::{any::TypeId, collections::HashMap, marker::PhantomData, sync::Arc};
 
-pub trait Actor: HandlesList<<Self as Actor>::Handles> {
+pub trait Actor: Sized + HandlesList<<Self as Actor>::Handles> {
     type Publishes: MessageList;
     type Handles: MessageList;
 }

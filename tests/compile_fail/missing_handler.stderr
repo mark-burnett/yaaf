@@ -6,8 +6,8 @@ error[E0277]: the trait bound `MyActor: Handler<MyMessage>` is not satisfied
   |
  ::: $WORKSPACE/src/actor.rs
   |
-  | pub trait Actor: HandlesList<<Self as Actor>::Handles> {
-  |                  ------------------------------------- required by this bound in `yaaf::Actor`
+  | pub trait Actor: Sized + HandlesList<<Self as Actor>::Handles> {
+  |                          ------------------------------------- required by this bound in `yaaf::Actor`
   |
   = note: required because of the requirements on the impl of `yaaf::handler::detail::HandlesList<(MyMessage,)>` for `MyActor`
   = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)

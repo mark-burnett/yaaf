@@ -1,7 +1,8 @@
 use crate::{
-    actor::ActorId,
+    actor::{Actor, ActorId},
+    context::Context,
     error::YaafInternalError,
-    handler::{HandleContext, Handler},
+    handler::Handler,
     message::Message,
     router::{ConcreteRouter, Router, SysRouter, SystemMessage},
 };
@@ -12,17 +13,17 @@ use ::tokio::{
     sync::Mutex,
 };
 
-pub(crate) struct Mailbox<M: Message> {
-    context: HandleContext,
+pub(crate) struct Mailbox<A: Actor + Handler<M>, M: Message> {
+    context: Context<A>,
     done: Sender<()>,
-    handler: Arc<Mutex<dyn Handler<M>>>,
+    handler: Arc<Mutex<A>>,
     recv: UnboundedReceiver<M>,
     sys_recv: UnboundedReceiver<SystemMessage>,
 }
 
-impl<M: Message> Mailbox<M> {
+impl<A: 'static + Actor + Handler<M>, M: Message> Mailbox<A, M> {
     pub(crate) async fn start(
-        actor: Arc<Mutex<dyn Handler<M>>>,
+        actor: Arc<Mutex<A>>,
         actor_id: ActorId,
         sys_router: &SysRouter,
         router: &ConcreteRouter<M>,
@@ -45,7 +46,7 @@ impl<M: Message> Mailbox<M> {
             })?;
         let (done, result) = channel(1);
 
-        let context = HandleContext::new(publish_routers);
+        let context = Context::new(publish_routers);
         let mailbox = Mailbox {
             context,
             done,

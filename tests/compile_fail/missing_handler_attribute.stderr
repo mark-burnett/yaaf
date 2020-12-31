@@ -6,8 +6,8 @@ error[E0277]: the trait bound `MyActor: HandlerRegistered<InvalidMessage>` is no
    |
   ::: $WORKSPACE/src/handler.rs
    |
-   | pub trait Handler<M: Message>: HandlerRegistered<M> + Send {
-   |                                -------------------- required by this bound in `yaaf::Handler`
+   | pub trait Handler<M: Message>: Actor + HandlerRegistered<M> + Send {
+   |                                        -------------------- required by this bound in `yaaf::Handler`
    |
    = help: the following implementations were found:
              <MyActor as HandlerRegistered<ValidMessage>>

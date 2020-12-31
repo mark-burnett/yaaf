@@ -6,9 +6,7 @@ pub enum YaafError {
     #[error(transparent)]
     AddressError(#[from] AddressError),
     #[error(transparent)]
-    HandleContextError(#[from] HandleContextError),
-    #[error(transparent)]
-    SourceContextError(#[from] SourceContextError),
+    ContextError(#[from] ContextError),
     #[error(transparent)]
     SystemError(#[from] SystemError),
 }
@@ -22,15 +20,7 @@ pub enum AddressError {
 }
 
 #[derive(Debug, Error)]
-pub enum HandleContextError {
-    #[error("failed to find router")]
-    RouterLookupError,
-    #[error("failed to broadcast message")]
-    BroadcastFailure { source: YaafInternalError },
-}
-
-#[derive(Debug, Error)]
-pub enum SourceContextError {
+pub enum ContextError {
     #[error("failed to find router")]
     RouterLookupError,
     #[error("failed to broadcast message")]

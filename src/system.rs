@@ -1,9 +1,10 @@
 use crate::{
     actor::{Actor, ActorAddress, ActorId},
+    context::Context,
     error::SystemError,
     message::detail::MessageList,
     router::{ConcreteRouter, Router, SysRouter, SystemMessage},
-    source::{Source, SourceContext, SourceMeta},
+    source::{Source, SourceMeta},
 };
 use ::std::{any::TypeId, collections::HashMap, sync::Arc};
 use ::tokio::{spawn, sync::mpsc::Receiver};
@@ -64,7 +65,7 @@ impl System {
         let publish_routers = S::Publishes::setup_routers(&self.sys_router, &mut self.routers)
             .await
             .map_err(|source| SystemError::AddSourceFailure { source })?;
-        let ctx: SourceContext = SourceContext::new(publish_routers);
+        let ctx = Context::new(publish_routers);
         spawn(source.run(ctx));
         Ok(())
     }

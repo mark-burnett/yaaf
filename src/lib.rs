@@ -1,6 +1,7 @@
 #![forbid(unsafe_code)]
 
 mod actor;
+mod context;
 mod handler;
 mod mailbox;
 mod message;

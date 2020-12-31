@@ -1,5 +1,17 @@
-error[E0277]: the trait bound `MyActor: Publisher<_>` is not satisfied
+error[E0599]: no method named `publish` found for mutable reference `&mut yaaf::Context<MyActor>` in the current scope
   --> $DIR/missing_publisher_attribute.rs:16:13
    |
-16 |         ctx.publish(self, InvalidMessage);
-   |             ^^^^^^^ the trait `Publisher<_>` is not implemented for `MyActor`
+11 | struct MyActor;
+   | --------------- doesn't satisfy `MyActor: Publisher<_>`
+...
+16 |         ctx.publish(InvalidMessage);
+   |             ^^^^^^^ method not found in `&mut yaaf::Context<MyActor>`
+   |
+  ::: $WORKSPACE/src/context.rs
+   |
+   | pub struct Context<A> {
+   | --------------------- doesn't satisfy `yaaf::Context<MyActor>: yaaf::PublishContext<_>`
+   |
+   = note: the method `publish` exists but the following trait bounds were not satisfied:
+           `MyActor: Publisher<_>`
+           which is required by `yaaf::Context<MyActor>: yaaf::PublishContext<_>`

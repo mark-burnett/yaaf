@@ -1,49 +1,11 @@
-use crate::{
-    actor::Actor,
-    error::HandleContextError,
-    message::Message,
-    publisher::Publisher,
-    router::{ConcreteRouter, Router},
-};
+use crate::{actor::Actor, context::Context, message::Message};
 use ::async_trait::async_trait;
-use ::std::{any::TypeId, collections::HashMap, sync::Arc};
-
-pub struct HandleContext {
-    routers: HashMap<TypeId, Arc<dyn Router>>,
-}
-
-impl HandleContext {
-    pub(crate) fn new(routers: HashMap<TypeId, Arc<dyn Router>>) -> Self {
-        HandleContext { routers }
-    }
-
-    pub fn publish<P, M>(&mut self, _publisher: &P, message: M) -> Result<(), HandleContextError>
-    where
-        P: Actor + Publisher<M>,
-        M: Message,
-    {
-        let type_id = TypeId::of::<M>();
-        let router = self
-            .routers
-            .get(&type_id)
-            .ok_or(HandleContextError::RouterLookupError)?
-            .as_any()
-            .downcast_ref::<ConcreteRouter<M>>()
-            .ok_or(HandleContextError::RouterLookupError)?;
-        router
-            .broadcast(message)
-            .map_err(|source| HandleContextError::BroadcastFailure {
-                source: source.into(),
-            })?;
-        Ok(())
-    }
-}
 
 pub trait HandlerRegistered<M: Message> {}
 
 #[async_trait]
-pub trait Handler<M: Message>: HandlerRegistered<M> + Send {
-    async fn handle(&mut self, ctx: &mut HandleContext, message: M);
+pub trait Handler<M: Message>: Actor + HandlerRegistered<M> + Send {
+    async fn handle(&mut self, ctx: &mut Context<Self>, message: M);
 }
 
 pub(crate) mod detail {

@@ -12,7 +12,7 @@ struct MyActor;
 
 #[async_trait]
 impl Handler<ValidMessage> for MyActor {
-    async fn handle(&mut self, _ctx: &mut HandleContext, _message: ValidMessage) {
+    async fn handle(&mut self, _ctx: &mut Context<Self>, _message: ValidMessage) {
     }
 }
 

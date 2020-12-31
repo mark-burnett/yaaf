@@ -17,7 +17,7 @@ struct MyActor;
 
 #[async_trait]
 impl Handler<Communication> for Bob {
-    async fn handle(&mut self, _ctx: &mut HandleContext, message: MyMessage) {
+    async fn handle(&mut self, _ctx: &mut Context, message: MyMessage) {
         println!("Received message");
     }
 }

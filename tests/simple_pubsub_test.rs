@@ -15,9 +15,8 @@ struct Alice;
 
 #[async_trait]
 impl Source for Alice {
-    async fn run(mut self, mut ctx: SourceContext) {
-        ctx.publish::<Alice, Communication>(&self, Communication("hello".into()))
-            .unwrap();
+    async fn run(mut self, mut ctx: Context<Self>) {
+        ctx.publish(Communication("hello".into())).unwrap();
     }
 }
 
@@ -39,7 +38,7 @@ impl Bob {
 
 #[async_trait]
 impl Handler<Communication> for Bob {
-    async fn handle(&mut self, _ctx: &mut HandleContext, message: Communication) {
+    async fn handle(&mut self, _ctx: &mut Context<Self>, message: Communication) {
         println!("Received Communication(\"{}\")", message.0);
         {
             let mut visited = self.visited.lock().await;

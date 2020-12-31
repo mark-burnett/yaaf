@@ -18,7 +18,7 @@ struct Bob {
 
 #[async_trait]
 impl Handler<Communication> for Bob {
-    async fn handle(&mut self, _ctx: &mut HandleContext, message: Communication) {
+    async fn handle(&mut self, _ctx: &mut Context<Self>, message: Communication) {
         println!("Received Communication(\"{}\")", message.0);
         {
             let mut visited = self.visited.lock().await;

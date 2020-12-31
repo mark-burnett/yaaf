@@ -8,7 +8,7 @@ struct MyActor;
 
 #[async_trait]
 impl Handler<MyMessage> for MyActor {
-    async fn handle(&mut self, _ctx: &mut HandleContext, _message: MyMessage) {
+    async fn handle(&mut self, _ctx: &mut Context<Self>, _message: MyMessage) {
     }
 }
 
