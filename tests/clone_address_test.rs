@@ -13,7 +13,7 @@ struct Communication(String);
 #[handle(Communication)]
 struct MyActor {
     done: Sender<()>,
-    visited: Arc<Mutex<bool>>,
+    visited: Arc<Mutex<i32>>,
 }
 
 #[async_trait]
@@ -22,31 +22,34 @@ impl Handler<Communication> for MyActor {
         println!("Received Communication(\"{}\")", message.0);
         {
             let mut visited = self.visited.lock().await;
-            *visited = true;
+            *visited += 1;
         }
         self.done.send(()).await.unwrap();
     }
 }
 
 #[tokio::test]
-async fn simple_tell() -> Result<(), Box<dyn ::std::error::Error>> {
+async fn cloned_tell() -> Result<(), Box<dyn ::std::error::Error>> {
     let mut system = System::new().await?;
 
     let (send, mut recv) = channel(1);
-    let visited = Arc::new(Mutex::new(false));
+    let visited = Arc::new(Mutex::new(0));
     let actor = MyActor {
         done: send,
         visited: visited.clone(),
     };
 
     let address = system.add_actor(actor).await?;
+    let cloned_address = address.clone();
 
     address.tell(Communication("Hello".into()))?;
+    cloned_address.tell(Communication("Hello".into()))?;
 
+    recv.recv().await.unwrap();
     recv.recv().await.unwrap();
     system.shutdown().await?;
 
-    assert_eq!(true, *visited.lock().await);
+    assert_eq!(2, *visited.lock().await);
 
     Ok(())
 }
