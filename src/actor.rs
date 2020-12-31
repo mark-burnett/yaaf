@@ -45,9 +45,9 @@ pub trait Tell<M: Message> {
     fn tell(&self, message: M) -> Result<(), AddressError>;
 }
 
-impl<A, M> Tell<M> for ActorAddress<A>
+impl<H, M> Tell<M> for ActorAddress<H>
 where
-    A: Actor + Handler<M>,
+    H: Handler<M>,
     M: Message,
 {
     fn tell(&self, message: M) -> Result<(), AddressError> {

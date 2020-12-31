@@ -29,9 +29,9 @@ pub trait Publish<M: Message> {
     fn publish(&mut self, message: M) -> Result<(), ContextError>;
 }
 
-impl<A, M> Publish<M> for Context<A>
+impl<P, M> Publish<M> for Context<P>
 where
-    A: Publisher<M>,
+    P: Publisher<M>,
     M: Message,
 {
     fn publish(&mut self, message: M) -> Result<(), ContextError> {
