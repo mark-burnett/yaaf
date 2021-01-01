@@ -15,7 +15,8 @@ jobs:
       matrix:
         rust:
           - stable
-          - 1.43.0  # MSRV
+          # Disable MSRV for now - compile fail tests are fragile to rust version.
+          # - 1.43.0  # MSRV
 
     steps:
       - uses: actions/checkout@v2
