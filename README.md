@@ -1,5 +1,10 @@
 # Yet Another Actor Framework
 
+[![GitHub Workflow Status (branch)](https://img.shields.io/github/workflow/status/mark-burnett/yaaf/ci/main)](https://github.com/mark-burnett/yaaf/actions?query=workflow%3Aci+branch%3Amain)
+[![Crates.io](https://img.shields.io/crates/l/yaaf)](https://opensource.org/licenses/Apache-2.0)
+[![Coveralls github branch](https://img.shields.io/coveralls/github/mark-burnett/yaaf/main)](https://coveralls.io/github/mark-burnett/yaaf)
+[![docs.rs](https://img.shields.io/badge/docs.rs-yaaf-blue)](https://docs.rs/yaaf)
+
 A simple, local actor framework.
 
 ## Example
