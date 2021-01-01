@@ -111,7 +111,7 @@ impl<M: Message> ConcreteRouter<M> {
     pub(crate) fn broadcast(&self, message: M) -> Result<(), YaafInternalError> {
         self.send.send(Envelope {
             distribution_type: DistributionType::Broadcast,
-            message: message,
+            message,
         })?;
         Ok(())
     }
@@ -119,7 +119,7 @@ impl<M: Message> ConcreteRouter<M> {
     pub(crate) fn tell(&self, recipient: ActorId, message: M) -> Result<(), YaafInternalError> {
         self.send.send(Envelope {
             distribution_type: DistributionType::Direct(recipient),
-            message: message,
+            message,
         })?;
         Ok(())
     }
