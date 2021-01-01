@@ -45,9 +45,7 @@ where
             .ok_or(ContextError::RouterLookupError)?;
         router
             .broadcast(message)
-            .map_err(|source| ContextError::BroadcastFailure {
-                source: source.into(),
-            })?;
+            .map_err(|source| ContextError::BroadcastFailure { source })?;
         Ok(())
     }
 }

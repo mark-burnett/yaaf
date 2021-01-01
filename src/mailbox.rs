@@ -63,26 +63,20 @@ impl<A: 'static + Actor + Handler<M>, M: Message> Mailbox<A, M> {
         loop {
             select! {
                 received = self.sys_recv.recv() => {
-                    match received {
-                        Some(message) => {
-                            match message {
-                                SystemMessage::Shutdown => {
-                                    // TODO: log the error
-                                    let _ = self.done.send(()).await;
-                                    break;
-                                }
+                    if let Some(message) = received {
+                        match message {
+                            SystemMessage::Shutdown => {
+                                // TODO: log the error
+                                let _ = self.done.send(()).await;
+                                break;
                             }
-                        },
-                        None => {},
+                        }
                     }
                 }
                 received = self.recv.recv() => {
-                    match received {
-                        Some(message) => {
-                            let mut guard = self.handler.lock().await;
-                            guard.handle(&mut self.context, message).await;
-                        },
-                        None => {},
+                    if let Some(message) = received {
+                        let mut guard = self.handler.lock().await;
+                        guard.handle(&mut self.context, message).await;
                     }
                 }
             }

@@ -46,10 +46,7 @@ pub(crate) mod detail {
                     mut result: HashMap<TypeId, Arc<dyn Router>>,
                 ) -> Result<HashMap<TypeId, Arc<dyn Router>>, YaafInternalError> {
                     let type_id = TypeId::of::<$head>();
-                    if ! existing_routers.contains_key(&type_id) {
-                        existing_routers.insert(type_id, Arc::new(ConcreteRouter::<$head>::new(sys_router).await?));
-                    }
-                    let r = existing_routers.get(&type_id).ok_or(YaafInternalError::RouterLookupFailure)?;
+                    let r = existing_routers.entry(type_id).or_insert(Arc::new(ConcreteRouter::<$head>::new(sys_router).await?));
                     result.insert(type_id, r.clone());
                     <($( $tail, )*) as MessageList>::setup_routers_impl(sys_router, existing_routers, result).await
                 }

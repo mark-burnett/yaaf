@@ -156,57 +156,48 @@ where
         loop {
             select! {
                 received = self.sys_recv.recv() => {
-                    match received {
-                        Some(message) => {
-                            match message {
-                                SystemMessage::Shutdown => break,
-                            }
-                        },
-                        None => {},
+                    if let Some(message) = received {
+                        match message {
+                            SystemMessage::Shutdown => break,
+                        }
                     }
                 },
                 receive = self.sub_recv.recv() => {
-                    match receive {
-                        Some(message) => {
-                            match message {
-                                SubscriptionMessage::Subscribe((recipient, send, done)) => {
-                                    match recipient {
-                                        Some(recipient_id) => {
-                                            self.subscribers.insert(recipient_id, send);
-                                        },
-                                        None => self.anonymous_subscribers.push(send),
-                                    }
-                                    // TODO: log error
-                                    let _ = done.send(());
-                                },
-                            }
-                        },
-                        None => {}
+                    if let Some(message) = receive {
+                        match message {
+                            SubscriptionMessage::Subscribe((recipient, send, done)) => {
+                                match recipient {
+                                    Some(recipient_id) => {
+                                        self.subscribers.insert(recipient_id, send);
+                                    },
+                                    None => self.anonymous_subscribers.push(send),
+                                }
+                                // TODO: log error
+                                let _ = done.send(());
+                            },
+                        }
                     }
                 },
                 received = self.recv.recv() => {
-                    match received {
-                        Some(envelope) => {
-                            match envelope.distribution_type {
-                                DistributionType::Broadcast => {
-                                    for (_recipient_id, send) in &self.subscribers {
-                                        // TODO: log the error
-                                        let _ = send.send(envelope.message.clone());
-                                    }
-                                    for send in &self.anonymous_subscribers {
-                                        // TODO: log the error
-                                        let _ = send.send(envelope.message.clone());
-                                    }
+                    if let Some(envelope) = received {
+                        match envelope.distribution_type {
+                            DistributionType::Broadcast => {
+                                for send in self.subscribers.values() {
+                                    // TODO: log the error
+                                    let _ = send.send(envelope.message.clone());
                                 }
-                                DistributionType::Direct(recipient_id) => {
-                                    if let Some(subscriber) = self.subscribers.get(&recipient_id) {
-                                        // TODO: log the error, possibly remove subscriber
-                                        let _ = subscriber.send(envelope.message);
-                                    }
+                                for send in &self.anonymous_subscribers {
+                                    // TODO: log the error
+                                    let _ = send.send(envelope.message.clone());
                                 }
                             }
-                        },
-                        None => {},
+                            DistributionType::Direct(recipient_id) => {
+                                if let Some(subscriber) = self.subscribers.get(&recipient_id) {
+                                    // TODO: log the error, possibly remove subscriber
+                                    let _ = subscriber.send(envelope.message);
+                                }
+                            }
+                        }
                     }
                 },
             }

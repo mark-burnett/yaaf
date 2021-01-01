@@ -60,9 +60,7 @@ where
             .downcast_ref()
             .ok_or(AddressError::RouterLookupError)?;
         r.tell(self.actor_id, message)
-            .map_err(|source| AddressError::TellFailure {
-                source: source.into(),
-            })?;
+            .map_err(|source| AddressError::TellFailure { source })?;
         Ok(())
     }
 }
