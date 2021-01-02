@@ -30,7 +30,7 @@ impl<A: Actor> Clone for ActorAddress<A> {
 impl<A: Actor> ActorAddress<A> {
     pub(crate) fn new(channels: HashMap<TypeId, Box<dyn DirectChannel>>) -> Self {
         ActorAddress {
-            channels: channels,
+            channels,
             _actor: PhantomData,
         }
     }

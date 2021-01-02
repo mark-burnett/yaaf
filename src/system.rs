@@ -18,6 +18,12 @@ pub struct System {
     done: Vec<mpsc::Receiver<()>>,
 }
 
+impl Default for System {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl System {
     pub fn new() -> Self {
         System {
