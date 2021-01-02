@@ -3,11 +3,6 @@ use ::dyn_clone::{clone_trait_object, DynClone};
 use ::std::{any::Any, fmt::Debug};
 use ::tokio::sync::{broadcast, mpsc};
 
-#[derive(Clone, Debug)]
-pub enum SystemMessage {
-    Shutdown,
-}
-
 pub trait Router: Any + DynClone + Debug + Send + Sync {
     fn as_any(&self) -> &dyn Any;
 }

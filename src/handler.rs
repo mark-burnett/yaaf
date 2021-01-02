@@ -15,8 +15,8 @@ pub(crate) mod detail {
         actor::Actor,
         error::YaafInternalError,
         mailbox::Mailbox,
-        message::{detail::MessageList, Message},
-        router::{Router, SystemMessage},
+        message::{detail::MessageList, Message, SystemMessage},
+        router::Router,
     };
     use ::async_trait::async_trait;
     use std::{any::TypeId, collections::HashMap, sync::Arc};

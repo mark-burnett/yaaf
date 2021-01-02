@@ -2,8 +2,8 @@ use crate::{
     actor::{Actor, ActorAddress},
     context::Context,
     error::SystemError,
-    message::detail::MessageList,
-    router::{Router, SystemMessage},
+    message::{detail::MessageList, SystemMessage},
+    router::Router,
     source::{Source, SourceMeta},
 };
 use ::std::{any::TypeId, collections::HashMap};

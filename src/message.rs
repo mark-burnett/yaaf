@@ -3,12 +3,14 @@ use ::std::fmt::Debug;
 pub trait Message: 'static + Clone + Debug + Send {}
 impl<M> Message for M where M: 'static + Clone + Debug + Send {}
 
+#[derive(Clone, Debug)]
+pub enum SystemMessage {
+    Shutdown,
+}
+
 pub(crate) mod detail {
     use super::*;
-    use crate::{
-        error::YaafInternalError,
-        router::{Router, SystemMessage},
-    };
+    use crate::{error::YaafInternalError, router::Router};
     use ::async_trait::async_trait;
     use ::std::{any::TypeId, collections::HashMap};
     use ::tokio::sync::broadcast::{channel, Sender};
