@@ -13,16 +13,16 @@ pub enum YaafError {
 
 #[derive(Debug, Error)]
 pub enum AddressError {
-    #[error("failed to find router")]
-    RouterLookupError,
+    #[error("failed to find channel")]
+    ChannelLookupError,
     #[error("failed to tell actor")]
     TellFailure { source: YaafInternalError },
 }
 
 #[derive(Debug, Error)]
 pub enum ContextError {
-    #[error("failed to find router")]
-    RouterLookupError,
+    #[error("failed to find channel")]
+    ChannelLookupError,
     #[error("failed to broadcast message")]
     BroadcastFailure { source: YaafInternalError },
 }
@@ -41,16 +41,16 @@ pub enum SystemError {
 
 #[derive(Debug, Error)]
 pub enum YaafInternalError {
-    #[error("failed to create router")]
-    CreateRouterFailure { source: Box<YaafInternalError> },
+    #[error("failed to create channel")]
+    CreateChannelFailure { source: Box<YaafInternalError> },
     #[error("failed to subscribe to messages")]
     MailboxSubscribeFailure { source: Box<YaafInternalError> },
     #[error("failed to subscribe to system events")]
     MailboxSystemSubscribeFailure { source: Box<YaafInternalError> },
     #[error("failed to receive subscription confirmation")]
     ReceiveFailure,
-    #[error("failed to lookup router")]
-    RouterLookupFailure,
+    #[error("failed to lookup channel")]
+    ChannelLookupFailure,
     #[error("failed to send")]
     SendFailure,
 }

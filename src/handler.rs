@@ -13,10 +13,10 @@ pub(crate) mod detail {
     use super::*;
     use crate::{
         actor::Actor,
+        channel::{BroadcastChannel, DirectChannel},
         error::YaafInternalError,
         mailbox::Mailbox,
         message::{detail::MessageList, Message, SystemMessage},
-        router::Router,
     };
     use ::async_trait::async_trait;
     use std::{any::TypeId, collections::HashMap, sync::Arc};
@@ -26,28 +26,28 @@ pub(crate) mod detail {
     pub trait HandlesList<ML: MessageList + ?Sized> {
         async fn setup_mailboxes(
             self,
-            handle_routers: &HashMap<TypeId, Box<dyn Router>>,
-            publish_routers: &HashMap<TypeId, Box<dyn Router>>,
-            sys_router: Sender<SystemMessage>,
-        ) -> Result<(HashMap<TypeId, Box<dyn Router>>, Vec<Receiver<()>>), YaafInternalError>;
+            handle_channels: &HashMap<TypeId, Box<dyn BroadcastChannel>>,
+            publish_channels: &HashMap<TypeId, Box<dyn BroadcastChannel>>,
+            system_channel: Sender<SystemMessage>,
+        ) -> Result<(HashMap<TypeId, Box<dyn DirectChannel>>, Vec<Receiver<()>>), YaafInternalError>;
     }
 
     macro_rules! start_mailbox {
-        ( $actor:ident, $sys_router:ident, $handle_routers:ident, $publish_routers:ident, $tell_routers:ident, $done:ident, $head:ident, $( $tail:ident, )* ) => {
+        ( $actor:ident, $system_channel:ident, $handle_channels:ident, $publish_channels:ident, $direct_channels:ident, $done:ident, $head:ident, $( $tail:ident, )* ) => {
             let type_id = TypeId::of::<$head>();
-            let router = $handle_routers
+            let channel = $handle_channels
                 .get(&type_id)
-                .ok_or(YaafInternalError::RouterLookupFailure)?
+                .ok_or(YaafInternalError::ChannelLookupFailure)?
                 .as_any()
                 .downcast_ref::<Sender<$head>>()
-                .ok_or(YaafInternalError::RouterLookupFailure)?;
-            let (tell, done) = Mailbox::start($actor.clone(), router.subscribe(), $sys_router.subscribe(), $publish_routers.clone()).await?;
+                .ok_or(YaafInternalError::ChannelLookupFailure)?;
+            let (tell, done) = Mailbox::start($actor.clone(), channel.subscribe(), $system_channel.subscribe(), $publish_channels.clone()).await?;
             $done.push(done);
-            $tell_routers.insert(type_id, Box::new(tell));
+            $direct_channels.insert(type_id, Box::new(tell));
 
-            start_mailbox!($actor, $sys_router, $handle_routers, $publish_routers, $tell_routers, $done, $( $tail, )*);
+            start_mailbox!($actor, $system_channel, $handle_channels, $publish_channels, $direct_channels, $done, $( $tail, )*);
         };
-        ($actor:ident, $sys_router:ident, $handle_routers:ident, $publish_routers:ident, $tell_routers:ident, $done:ident,) => {};
+        ($actor:ident, $system_channel:ident, $handle_channels:ident, $publish_channels:ident, $direct_channels:ident, $done:ident,) => {};
     }
 
     macro_rules! impl_handles_list {
@@ -60,24 +60,24 @@ pub(crate) mod detail {
             {
                 async fn setup_mailboxes(
                     self,
-                    handle_routers: &HashMap<TypeId, Box<dyn Router>>,
-                    publish_routers: &HashMap<TypeId, Box<dyn Router>>,
-                    sys_router: Sender<SystemMessage>,
-                ) -> Result<(HashMap<TypeId, Box<dyn Router>>, Vec<Receiver<()>>), YaafInternalError> {
+                    handle_channels: &HashMap<TypeId, Box<dyn BroadcastChannel>>,
+                    publish_channels: &HashMap<TypeId, Box<dyn BroadcastChannel>>,
+                    system_channel: Sender<SystemMessage>,
+                ) -> Result<(HashMap<TypeId, Box<dyn DirectChannel>>, Vec<Receiver<()>>), YaafInternalError> {
                     let actor = Arc::new(Mutex::new(self));
-                    let mut tell_routers: HashMap<TypeId, Box<dyn Router>> = HashMap::new();
+                    let mut direct_channels: HashMap<TypeId, Box<dyn DirectChannel>> = HashMap::new();
                     let mut done = Vec::new();
                     start_mailbox!(
                         actor,
-                        sys_router,
-                        handle_routers,
-                        publish_routers,
-                        tell_routers,
+                        system_channel,
+                        handle_channels,
+                        publish_channels,
+                        direct_channels,
                         done,
                         $head,
                         $( $tail, )*
                     );
-                    Ok((tell_routers, done))
+                    Ok((direct_channels, done))
                 }
             }
 

@@ -1,10 +1,10 @@
 use crate::{
     actor::Actor,
+    channel::BroadcastChannel,
     context::Context,
     error::YaafInternalError,
     handler::Handler,
     message::{Message, SystemMessage},
-    router::Router,
 };
 use ::std::{any::TypeId, collections::HashMap, sync::Arc};
 use ::tokio::{
@@ -26,12 +26,12 @@ impl<A: 'static + Actor + Handler<M>, M: Message> Mailbox<A, M> {
         actor: Arc<Mutex<A>>,
         recv_broadcast: broadcast::Receiver<M>,
         recv_system: broadcast::Receiver<SystemMessage>,
-        publish_routers: HashMap<TypeId, Box<dyn Router>>,
+        publish_channels: HashMap<TypeId, Box<dyn BroadcastChannel>>,
     ) -> Result<(mpsc::UnboundedSender<M>, mpsc::Receiver<()>), YaafInternalError> {
         let (done, result) = mpsc::channel(1);
         let (send_tell, recv_tell) = mpsc::unbounded_channel();
 
-        let context = Context::new(publish_routers);
+        let context = Context::new(publish_channels);
         let mailbox = Mailbox {
             context,
             done,
