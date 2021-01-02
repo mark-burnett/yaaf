@@ -12,7 +12,7 @@ pub struct Context<A> {
 impl<A> Context<A> {
     pub(crate) fn new(channels: HashMap<TypeId, Box<dyn BroadcastChannel>>) -> Self {
         Context {
-            channels: channels,
+            channels,
             _actor: PhantomData,
         }
     }
