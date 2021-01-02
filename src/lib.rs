@@ -62,7 +62,7 @@
 //!
 //! #[tokio::main]
 //! async fn main() -> Result<(), Box<dyn ::std::error::Error>> {
-//!     let mut system = System::new().await?;
+//!     let mut system = System::new();
 //!
 //!     let server = Server;
 //!     let paddle1 = Paddle;

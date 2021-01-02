@@ -56,7 +56,7 @@ impl Handler<MessageB> for MyActor {
 
 #[tokio::test]
 async fn multiple_handler() -> Result<(), Box<dyn ::std::error::Error>> {
-    let mut system = System::new().await?;
+    let mut system = System::new();
 
     let (send, mut recv) = channel(1);
     let got_a = Arc::new(Mutex::new(false));

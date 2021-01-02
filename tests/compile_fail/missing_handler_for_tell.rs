@@ -18,7 +18,7 @@ impl Handler<ValidMessage> for MyActor {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn ::std::error::Error>> {
-    let mut system = System::new().await?;
+    let mut system = System::new();
 
     let actor = MyActor;
 
