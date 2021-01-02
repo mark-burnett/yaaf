@@ -4,7 +4,7 @@ use ::tokio::sync::broadcast::Sender;
 
 pub struct Context<A> {
     routers: HashMap<TypeId, Box<dyn Router>>,
-    _actor: PhantomData<AtomicPtr<Box<A>>>,
+    _actor: PhantomData<AtomicPtr<A>>,
 }
 
 impl<A> Context<A> {
