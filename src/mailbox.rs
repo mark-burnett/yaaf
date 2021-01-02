@@ -3,8 +3,8 @@ use crate::{
     context::Context,
     error::YaafInternalError,
     handler::Handler,
-    message::Message,
-    router::{Router, SystemMessage},
+    message::{Message, SystemMessage},
+    router::Router,
 };
 use ::std::{any::TypeId, collections::HashMap, sync::Arc};
 use ::tokio::{
