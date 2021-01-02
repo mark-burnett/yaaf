@@ -12,41 +12,42 @@ pub trait Handler<M: Message>: Actor + HandlerRegistered<M> + Send {
 pub(crate) mod detail {
     use super::*;
     use crate::{
-        actor::{Actor, ActorId},
+        actor::Actor,
         error::YaafInternalError,
         mailbox::Mailbox,
         message::{detail::MessageList, Message},
-        router::{ConcreteRouter, Router, SysRouter},
+        router::{Router, SystemMessage},
     };
     use ::async_trait::async_trait;
     use std::{any::TypeId, collections::HashMap, sync::Arc};
-    use tokio::sync::{mpsc::Receiver, Mutex};
+    use tokio::sync::{broadcast::Sender, mpsc::Receiver, Mutex};
 
     #[async_trait]
     pub trait HandlesList<ML: MessageList + ?Sized> {
         async fn setup_mailboxes(
             self,
-            actor_id: ActorId,
-            handle_routers: &HashMap<TypeId, Arc<dyn Router>>,
-            publish_routers: &HashMap<TypeId, Arc<dyn Router>>,
-            sys_router: &SysRouter,
-        ) -> Result<Vec<Receiver<()>>, YaafInternalError>;
+            handle_routers: &HashMap<TypeId, Box<dyn Router>>,
+            publish_routers: &HashMap<TypeId, Box<dyn Router>>,
+            sys_router: Sender<SystemMessage>,
+        ) -> Result<(HashMap<TypeId, Box<dyn Router>>, Vec<Receiver<()>>), YaafInternalError>;
     }
 
     macro_rules! start_mailbox {
-        ( $actor:ident, $actor_id:ident, $sys_router:ident, $handle_routers:ident, $publish_routers:ident, $done:ident, $head:ident, $( $tail:ident, )* ) => {
+        ( $actor:ident, $sys_router:ident, $handle_routers:ident, $publish_routers:ident, $tell_routers:ident, $done:ident, $head:ident, $( $tail:ident, )* ) => {
             let type_id = TypeId::of::<$head>();
             let router = $handle_routers
                 .get(&type_id)
                 .ok_or(YaafInternalError::RouterLookupFailure)?
                 .as_any()
-                .downcast_ref::<ConcreteRouter<$head>>()
+                .downcast_ref::<Sender<$head>>()
                 .ok_or(YaafInternalError::RouterLookupFailure)?;
-            $done.push(Mailbox::start($actor.clone(), $actor_id, $sys_router, router, $publish_routers.clone()).await?);
+            let (tell, done) = Mailbox::start($actor.clone(), router.subscribe(), $sys_router.subscribe(), $publish_routers.clone()).await?;
+            $done.push(done);
+            $tell_routers.insert(type_id, Box::new(tell));
 
-            start_mailbox!($actor, $actor_id, $sys_router, $handle_routers, $publish_routers, $done, $( $tail, )*);
+            start_mailbox!($actor, $sys_router, $handle_routers, $publish_routers, $tell_routers, $done, $( $tail, )*);
         };
-        ($actor:ident, $actor_id:ident, $sys_router:ident, $handle_routers:ident, $publish_routers:ident, $done:ident,) => {};
+        ($actor:ident, $sys_router:ident, $handle_routers:ident, $publish_routers:ident, $tell_routers:ident, $done:ident,) => {};
     }
 
     macro_rules! impl_handles_list {
@@ -59,24 +60,24 @@ pub(crate) mod detail {
             {
                 async fn setup_mailboxes(
                     self,
-                    actor_id: ActorId,
-                    handle_routers: &HashMap<TypeId, Arc<dyn Router>>,
-                    publish_routers: &HashMap<TypeId, Arc<dyn Router>>,
-                    sys_router: &SysRouter,
-                ) -> Result<Vec<Receiver<()>>, YaafInternalError> {
+                    handle_routers: &HashMap<TypeId, Box<dyn Router>>,
+                    publish_routers: &HashMap<TypeId, Box<dyn Router>>,
+                    sys_router: Sender<SystemMessage>,
+                ) -> Result<(HashMap<TypeId, Box<dyn Router>>, Vec<Receiver<()>>), YaafInternalError> {
                     let actor = Arc::new(Mutex::new(self));
+                    let mut tell_routers: HashMap<TypeId, Box<dyn Router>> = HashMap::new();
                     let mut done = Vec::new();
                     start_mailbox!(
                         actor,
-                        actor_id,
                         sys_router,
                         handle_routers,
                         publish_routers,
+                        tell_routers,
                         done,
                         $head,
                         $( $tail, )*
                     );
-                    Ok(done)
+                    Ok((tell_routers, done))
                 }
             }
 

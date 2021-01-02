@@ -30,7 +30,7 @@ impl Handler<Communication> for MyActor {
 
 #[tokio::test]
 async fn simple_tell() -> Result<(), Box<dyn ::std::error::Error>> {
-    let mut system = System::new().await?;
+    let mut system = System::new();
 
     let (send, mut recv) = channel(1);
     let visited = Arc::new(Mutex::new(false));

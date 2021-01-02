@@ -7,22 +7,23 @@ pub(crate) mod detail {
     use super::*;
     use crate::{
         error::YaafInternalError,
-        router::{ConcreteRouter, Router, SysRouter},
+        router::{Router, SystemMessage},
     };
     use ::async_trait::async_trait;
-    use ::std::{any::TypeId, collections::HashMap, sync::Arc};
+    use ::std::{any::TypeId, collections::HashMap};
+    use ::tokio::sync::broadcast::{channel, Sender};
 
     #[async_trait]
     pub trait MessageList {
         async fn setup_routers(
-            sys_router: &SysRouter,
-            existing_routers: &mut HashMap<TypeId, Arc<dyn Router>>,
-        ) -> Result<HashMap<TypeId, Arc<dyn Router>>, YaafInternalError>;
+            sys_router: Sender<SystemMessage>,
+            existing_routers: &mut HashMap<TypeId, Box<dyn Router>>,
+        ) -> Result<HashMap<TypeId, Box<dyn Router>>, YaafInternalError>;
         async fn setup_routers_impl(
-            sys_router: &SysRouter,
-            existing_routers: &mut HashMap<TypeId, Arc<dyn Router>>,
-            result: HashMap<TypeId, Arc<dyn Router>>,
-        ) -> Result<HashMap<TypeId, Arc<dyn Router>>, YaafInternalError>;
+            sys_router: Sender<SystemMessage>,
+            existing_routers: &mut HashMap<TypeId, Box<dyn Router>>,
+            result: HashMap<TypeId, Box<dyn Router>>,
+        ) -> Result<HashMap<TypeId, Box<dyn Router>>, YaafInternalError>;
     }
 
     macro_rules! impl_message_list {
@@ -34,19 +35,21 @@ pub(crate) mod detail {
                 $( $tail: Message),*
             {
                 async fn setup_routers(
-                    sys_router: &SysRouter,
-                    existing_routers: &mut HashMap<TypeId, Arc<dyn Router>>,
-                ) -> Result<HashMap<TypeId, Arc<dyn Router>>, YaafInternalError> {
+                    sys_router: Sender<SystemMessage>,
+                    existing_routers: &mut HashMap<TypeId, Box<dyn Router>>,
+                ) -> Result<HashMap<TypeId, Box<dyn Router>>, YaafInternalError> {
                     Self::setup_routers_impl(sys_router, existing_routers, HashMap::new()).await
                 }
 
                 async fn setup_routers_impl(
-                    sys_router: &SysRouter,
-                    existing_routers: &mut HashMap<TypeId, Arc<dyn Router>>,
-                    mut result: HashMap<TypeId, Arc<dyn Router>>,
-                ) -> Result<HashMap<TypeId, Arc<dyn Router>>, YaafInternalError> {
+                    sys_router: Sender<SystemMessage>,
+                    existing_routers: &mut HashMap<TypeId, Box<dyn Router>>,
+                    mut result: HashMap<TypeId, Box<dyn Router>>,
+                ) -> Result<HashMap<TypeId, Box<dyn Router>>, YaafInternalError> {
                     let type_id = TypeId::of::<$head>();
-                    let r = existing_routers.entry(type_id).or_insert(Arc::new(ConcreteRouter::<$head>::new(sys_router).await?));
+                    let r = existing_routers.entry(type_id).or_insert(Box::new(
+                        channel::<$head>(1000).0
+                    ));
                     result.insert(type_id, r.clone());
                     <($( $tail, )*) as MessageList>::setup_routers_impl(sys_router, existing_routers, result).await
                 }
@@ -58,17 +61,17 @@ pub(crate) mod detail {
             #[async_trait]
             impl MessageList for () {
                 async fn setup_routers(
-                    sys_router: &SysRouter,
-                    existing_routers: &mut HashMap<TypeId, Arc<dyn Router>>,
-                ) -> Result<HashMap<TypeId, Arc<dyn Router>>, YaafInternalError> {
+                    sys_router: Sender<SystemMessage>,
+                    existing_routers: &mut HashMap<TypeId, Box<dyn Router>>,
+                ) -> Result<HashMap<TypeId, Box<dyn Router>>, YaafInternalError> {
                     Self::setup_routers_impl(sys_router, existing_routers, HashMap::new()).await
                 }
 
                 async fn setup_routers_impl(
-                    _sys_router: &SysRouter,
-                    _existing_routers: &mut HashMap<TypeId, Arc<dyn Router>>,
-                    result: HashMap<TypeId, Arc<dyn Router>>,
-                ) -> Result<HashMap<TypeId, Arc<dyn Router>>, YaafInternalError> {
+                    _sys_router: Sender<SystemMessage>,
+                    _existing_routers: &mut HashMap<TypeId, Box<dyn Router>>,
+                    result: HashMap<TypeId, Box<dyn Router>>,
+                ) -> Result<HashMap<TypeId, Box<dyn Router>>, YaafInternalError> {
                     Ok(result)
                 }
             }

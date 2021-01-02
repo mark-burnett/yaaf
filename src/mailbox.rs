@@ -1,69 +1,55 @@
 use crate::{
-    actor::{Actor, ActorId},
+    actor::Actor,
     context::Context,
     error::YaafInternalError,
     handler::Handler,
     message::Message,
-    router::{ConcreteRouter, Router, SysRouter, SystemMessage},
+    router::{Router, SystemMessage},
 };
 use ::std::{any::TypeId, collections::HashMap, sync::Arc};
 use ::tokio::{
     select, spawn,
-    sync::mpsc::{channel, unbounded_channel, Receiver, Sender, UnboundedReceiver},
-    sync::Mutex,
+    sync::{broadcast, mpsc, Mutex},
 };
 
 pub(crate) struct Mailbox<A: Actor + Handler<M>, M: Message> {
     context: Context<A>,
-    done: Sender<()>,
+    done: mpsc::Sender<()>,
     handler: Arc<Mutex<A>>,
-    recv: UnboundedReceiver<M>,
-    sys_recv: UnboundedReceiver<SystemMessage>,
+    recv_broadcast: broadcast::Receiver<M>,
+    recv_system: broadcast::Receiver<SystemMessage>,
+    recv_tell: mpsc::UnboundedReceiver<M>,
 }
 
 impl<A: 'static + Actor + Handler<M>, M: Message> Mailbox<A, M> {
     pub(crate) async fn start(
         actor: Arc<Mutex<A>>,
-        actor_id: ActorId,
-        sys_router: &SysRouter,
-        router: &ConcreteRouter<M>,
-        publish_routers: HashMap<TypeId, Arc<dyn Router>>,
-    ) -> Result<Receiver<()>, YaafInternalError> {
-        let (sys_send, sys_recv) = unbounded_channel();
-        sys_router
-            .subscribe(None, sys_send)
-            .await
-            .map_err(|source| YaafInternalError::MailboxSystemSubscribeFailure {
-                source: source.into(),
-            })?;
-
-        let (send, recv) = unbounded_channel();
-        router
-            .subscribe(Some(actor_id), send)
-            .await
-            .map_err(|source| YaafInternalError::MailboxSubscribeFailure {
-                source: source.into(),
-            })?;
-        let (done, result) = channel(1);
+        recv_broadcast: broadcast::Receiver<M>,
+        recv_system: broadcast::Receiver<SystemMessage>,
+        publish_routers: HashMap<TypeId, Box<dyn Router>>,
+    ) -> Result<(mpsc::UnboundedSender<M>, mpsc::Receiver<()>), YaafInternalError> {
+        let (done, result) = mpsc::channel(1);
+        let (send_tell, recv_tell) = mpsc::unbounded_channel();
 
         let context = Context::new(publish_routers);
         let mailbox = Mailbox {
             context,
             done,
             handler: actor,
-            recv,
-            sys_recv,
+            recv_broadcast,
+            recv_system,
+            recv_tell,
         };
 
         spawn(mailbox.run());
-        Ok(result)
+        Ok((send_tell, result))
     }
 
     async fn run(mut self) {
         loop {
             select! {
-                received = self.sys_recv.recv() => {
-                    if let Some(message) = received {
+                received = self.recv_system.recv() => {
+                    if let Ok(message) = received {
                         match message {
                             SystemMessage::Shutdown => {
                                 // TODO: log the error
@@ -73,8 +59,14 @@ impl<A: 'static + Actor + Handler<M>, M: Message> Mailbox<A, M> {
                         }
                     }
                 }
-                received = self.recv.recv() => {
+                received = self.recv_tell.recv() => {
                     if let Some(message) = received {
+                        let mut guard = self.handler.lock().await;
+                        guard.handle(&mut self.context, message).await;
+                    }
+                }
+                received = self.recv_broadcast.recv() => {
+                    if let Ok(message) = received {
                         let mut guard = self.handler.lock().await;
                         guard.handle(&mut self.context, message).await;
                     }

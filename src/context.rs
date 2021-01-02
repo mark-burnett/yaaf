@@ -1,23 +1,14 @@
-use crate::{
-    error::ContextError,
-    message::Message,
-    publisher::Publisher,
-    router::{ConcreteRouter, Router},
-};
-use std::{
-    any::TypeId,
-    collections::HashMap,
-    marker::PhantomData,
-    sync::{atomic::AtomicPtr, Arc},
-};
+use crate::{error::ContextError, message::Message, publisher::Publisher, router::Router};
+use ::std::{any::TypeId, collections::HashMap, marker::PhantomData, sync::atomic::AtomicPtr};
+use ::tokio::sync::broadcast::Sender;
 
 pub struct Context<A> {
-    routers: HashMap<TypeId, Arc<dyn Router>>,
+    routers: HashMap<TypeId, Box<dyn Router>>,
     _actor: PhantomData<AtomicPtr<Box<A>>>,
 }
 
 impl<A> Context<A> {
-    pub(crate) fn new(routers: HashMap<TypeId, Arc<dyn Router>>) -> Self {
+    pub(crate) fn new(routers: HashMap<TypeId, Box<dyn Router>>) -> Self {
         Context {
             routers,
             _actor: PhantomData,
@@ -41,11 +32,13 @@ where
             .get(&type_id)
             .ok_or(ContextError::RouterLookupError)?
             .as_any()
-            .downcast_ref::<ConcreteRouter<M>>()
+            .downcast_ref::<Sender<M>>()
             .ok_or(ContextError::RouterLookupError)?;
         router
-            .broadcast(message)
-            .map_err(|source| ContextError::BroadcastFailure { source })?;
+            .send(message)
+            .map_err(|source| ContextError::BroadcastFailure {
+                source: source.into(),
+            })?;
         Ok(())
     }
 }

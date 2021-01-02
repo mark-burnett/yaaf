@@ -50,7 +50,7 @@ impl Handler<Communication> for Bob {
 
 #[tokio::test]
 async fn simple_pubsub() -> Result<(), Box<dyn ::std::error::Error>> {
-    let mut system = System::new().await?;
+    let mut system = System::new();
 
     let alice = Alice;
 

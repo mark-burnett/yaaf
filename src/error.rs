@@ -1,5 +1,5 @@
 use ::thiserror::Error;
-use ::tokio::sync::{mpsc::error::SendError, oneshot::error::RecvError};
+use ::tokio::sync::{broadcast, mpsc};
 
 #[derive(Debug, Error)]
 pub enum YaafError {
@@ -55,14 +55,20 @@ pub enum YaafInternalError {
     SendFailure,
 }
 
-impl<T> From<SendError<T>> for YaafInternalError {
-    fn from(_src: SendError<T>) -> Self {
+impl<T> From<broadcast::error::SendError<T>> for YaafInternalError {
+    fn from(_src: broadcast::error::SendError<T>) -> Self {
         YaafInternalError::SendFailure
     }
 }
 
-impl From<RecvError> for YaafInternalError {
-    fn from(_src: RecvError) -> Self {
+impl<T> From<mpsc::error::SendError<T>> for YaafInternalError {
+    fn from(_src: mpsc::error::SendError<T>) -> Self {
+        YaafInternalError::SendFailure
+    }
+}
+
+impl From<mpsc::error::RecvError> for YaafInternalError {
+    fn from(_src: mpsc::error::RecvError) -> Self {
         YaafInternalError::ReceiveFailure
     }
 }

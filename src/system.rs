@@ -1,70 +1,58 @@
 use crate::{
-    actor::{Actor, ActorAddress, ActorId},
+    actor::{Actor, ActorAddress},
     context::Context,
     error::SystemError,
     message::detail::MessageList,
-    router::{ConcreteRouter, Router, SysRouter, SystemMessage},
+    router::{Router, SystemMessage},
     source::{Source, SourceMeta},
 };
-use ::std::{any::TypeId, collections::HashMap, sync::Arc};
-use ::tokio::{spawn, sync::mpsc::Receiver};
+use ::std::{any::TypeId, collections::HashMap};
+use ::tokio::{
+    spawn,
+    sync::{broadcast, mpsc},
+};
 
 pub struct System {
-    next_id: u32,
-    routers: HashMap<TypeId, Arc<dyn Router>>,
-    sys_router: SysRouter,
-    done: Vec<Receiver<()>>,
+    routers: HashMap<TypeId, Box<dyn Router>>,
+    sys_router: broadcast::Sender<SystemMessage>,
+    done: Vec<mpsc::Receiver<()>>,
 }
 
 impl System {
-    pub async fn new() -> Result<Self, SystemError> {
-        Ok(System {
-            next_id: 0,
+    pub fn new() -> Self {
+        System {
             routers: HashMap::new(),
-            sys_router: ConcreteRouter::<SystemMessage>::new_system_router()
-                .await
-                .map_err(|source| SystemError::CreateError { source })?,
+            sys_router: broadcast::channel(1000).0,
             done: Vec::new(),
-        })
-    }
-
-    fn get_id(&mut self) -> ActorId {
-        let result = ActorId(self.next_id);
-        self.next_id += 1;
-        result
+        }
     }
 
     pub async fn add_actor<A: Actor>(&mut self, actor: A) -> Result<ActorAddress<A>, SystemError> {
-        let publish_routers = A::Publishes::setup_routers(&self.sys_router, &mut self.routers)
-            .await
-            .map_err(|source| SystemError::AddActorFailure { source })?;
-        let handle_routers = A::Handles::setup_routers(&self.sys_router, &mut self.routers)
-            .await
-            .map_err(|source| SystemError::AddActorFailure { source })?;
-
-        let actor_id = self.get_id();
-        self.done.extend(
-            actor
-                .setup_mailboxes(
-                    actor_id,
-                    &handle_routers,
-                    &publish_routers,
-                    &self.sys_router,
-                )
+        let publish_routers =
+            A::Publishes::setup_routers(self.sys_router.clone(), &mut self.routers)
                 .await
-                .map_err(|source| SystemError::AddActorFailure { source })?,
-        );
+                .map_err(|source| SystemError::AddActorFailure { source })?;
+        let handle_routers = A::Handles::setup_routers(self.sys_router.clone(), &mut self.routers)
+            .await
+            .map_err(|source| SystemError::AddActorFailure { source })?;
 
-        Ok(ActorAddress::new(actor_id, handle_routers))
+        let (tell_routers, done) = actor
+            .setup_mailboxes(&handle_routers, &publish_routers, self.sys_router.clone())
+            .await
+            .map_err(|source| SystemError::AddActorFailure { source })?;
+        self.done.extend(done);
+
+        Ok(ActorAddress::new(tell_routers))
     }
 
     pub async fn add_source<S: 'static + Source + SourceMeta>(
         &mut self,
         source: S,
     ) -> Result<(), SystemError> {
-        let publish_routers = S::Publishes::setup_routers(&self.sys_router, &mut self.routers)
-            .await
-            .map_err(|source| SystemError::AddSourceFailure { source })?;
+        let publish_routers =
+            S::Publishes::setup_routers(self.sys_router.clone(), &mut self.routers)
+                .await
+                .map_err(|source| SystemError::AddSourceFailure { source })?;
         let ctx = Context::new(publish_routers);
         spawn(source.run(ctx));
         Ok(())
@@ -72,8 +60,10 @@ impl System {
 
     pub async fn shutdown(&mut self) -> Result<(), SystemError> {
         self.sys_router
-            .broadcast(SystemMessage::Shutdown)
-            .map_err(|source| SystemError::ShutdownError { source })?;
+            .send(SystemMessage::Shutdown)
+            .map_err(|source| SystemError::ShutdownError {
+                source: source.into(),
+            })?;
         for r in &mut self.done {
             // TODO: log this error
             let _ = r.recv().await;
