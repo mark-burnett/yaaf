@@ -10,22 +10,22 @@ pub enum SystemMessage {
 
 pub(crate) mod detail {
     use super::*;
-    use crate::{error::YaafInternalError, router::Router};
+    use crate::{channel::BroadcastChannel, error::YaafInternalError};
     use ::async_trait::async_trait;
     use ::std::{any::TypeId, collections::HashMap};
     use ::tokio::sync::broadcast::{channel, Sender};
 
     #[async_trait]
     pub trait MessageList {
-        async fn setup_routers(
-            sys_router: Sender<SystemMessage>,
-            existing_routers: &mut HashMap<TypeId, Box<dyn Router>>,
-        ) -> Result<HashMap<TypeId, Box<dyn Router>>, YaafInternalError>;
-        async fn setup_routers_impl(
-            sys_router: Sender<SystemMessage>,
-            existing_routers: &mut HashMap<TypeId, Box<dyn Router>>,
-            result: HashMap<TypeId, Box<dyn Router>>,
-        ) -> Result<HashMap<TypeId, Box<dyn Router>>, YaafInternalError>;
+        async fn setup_channels(
+            system_channel: Sender<SystemMessage>,
+            broadcast_channels: &mut HashMap<TypeId, Box<dyn BroadcastChannel>>,
+        ) -> Result<HashMap<TypeId, Box<dyn BroadcastChannel>>, YaafInternalError>;
+        async fn setup_channels_impl(
+            system_channel: Sender<SystemMessage>,
+            broadcast_channels: &mut HashMap<TypeId, Box<dyn BroadcastChannel>>,
+            result: HashMap<TypeId, Box<dyn BroadcastChannel>>,
+        ) -> Result<HashMap<TypeId, Box<dyn BroadcastChannel>>, YaafInternalError>;
     }
 
     macro_rules! impl_message_list {
@@ -36,24 +36,24 @@ pub(crate) mod detail {
                 $head: Message,
                 $( $tail: Message),*
             {
-                async fn setup_routers(
-                    sys_router: Sender<SystemMessage>,
-                    existing_routers: &mut HashMap<TypeId, Box<dyn Router>>,
-                ) -> Result<HashMap<TypeId, Box<dyn Router>>, YaafInternalError> {
-                    Self::setup_routers_impl(sys_router, existing_routers, HashMap::new()).await
+                async fn setup_channels(
+                    system_channel: Sender<SystemMessage>,
+                    broadcast_channels: &mut HashMap<TypeId, Box<dyn BroadcastChannel>>,
+                ) -> Result<HashMap<TypeId, Box<dyn BroadcastChannel>>, YaafInternalError> {
+                    Self::setup_channels_impl(system_channel, broadcast_channels, HashMap::new()).await
                 }
 
-                async fn setup_routers_impl(
-                    sys_router: Sender<SystemMessage>,
-                    existing_routers: &mut HashMap<TypeId, Box<dyn Router>>,
-                    mut result: HashMap<TypeId, Box<dyn Router>>,
-                ) -> Result<HashMap<TypeId, Box<dyn Router>>, YaafInternalError> {
+                async fn setup_channels_impl(
+                    system_channel: Sender<SystemMessage>,
+                    broadcast_channels: &mut HashMap<TypeId, Box<dyn BroadcastChannel>>,
+                    mut result: HashMap<TypeId, Box<dyn BroadcastChannel>>,
+                ) -> Result<HashMap<TypeId, Box<dyn BroadcastChannel>>, YaafInternalError> {
                     let type_id = TypeId::of::<$head>();
-                    let r = existing_routers.entry(type_id).or_insert(Box::new(
+                    let r = broadcast_channels.entry(type_id).or_insert(Box::new(
                         channel::<$head>(1000).0
                     ));
                     result.insert(type_id, r.clone());
-                    <($( $tail, )*) as MessageList>::setup_routers_impl(sys_router, existing_routers, result).await
+                    <($( $tail, )*) as MessageList>::setup_channels_impl(system_channel, broadcast_channels, result).await
                 }
             }
 
@@ -62,18 +62,18 @@ pub(crate) mod detail {
         () => {
             #[async_trait]
             impl MessageList for () {
-                async fn setup_routers(
-                    sys_router: Sender<SystemMessage>,
-                    existing_routers: &mut HashMap<TypeId, Box<dyn Router>>,
-                ) -> Result<HashMap<TypeId, Box<dyn Router>>, YaafInternalError> {
-                    Self::setup_routers_impl(sys_router, existing_routers, HashMap::new()).await
+                async fn setup_channels(
+                    system_channel: Sender<SystemMessage>,
+                    broadcast_channels: &mut HashMap<TypeId, Box<dyn BroadcastChannel>>,
+                ) -> Result<HashMap<TypeId, Box<dyn BroadcastChannel>>, YaafInternalError> {
+                    Self::setup_channels_impl(system_channel, broadcast_channels, HashMap::new()).await
                 }
 
-                async fn setup_routers_impl(
-                    _sys_router: Sender<SystemMessage>,
-                    _existing_routers: &mut HashMap<TypeId, Box<dyn Router>>,
-                    result: HashMap<TypeId, Box<dyn Router>>,
-                ) -> Result<HashMap<TypeId, Box<dyn Router>>, YaafInternalError> {
+                async fn setup_channels_impl(
+                    _system_channel: Sender<SystemMessage>,
+                    _broadcast_channels: &mut HashMap<TypeId, Box<dyn BroadcastChannel>>,
+                    result: HashMap<TypeId, Box<dyn BroadcastChannel>>,
+                ) -> Result<HashMap<TypeId, Box<dyn BroadcastChannel>>, YaafInternalError> {
                     Ok(result)
                 }
             }

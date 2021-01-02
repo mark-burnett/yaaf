@@ -87,12 +87,12 @@
 //! ```
 
 mod actor;
+mod channel;
 mod context;
 mod handler;
 mod mailbox;
 mod message;
 mod publisher;
-mod router;
 mod source;
 mod system;
 

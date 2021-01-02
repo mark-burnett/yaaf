@@ -1,9 +1,9 @@
 use crate::{
     actor::{Actor, ActorAddress},
+    channel::BroadcastChannel,
     context::Context,
     error::SystemError,
     message::{detail::MessageList, SystemMessage},
-    router::Router,
     source::{Source, SourceMeta},
 };
 use ::std::{any::TypeId, collections::HashMap};
@@ -13,53 +13,58 @@ use ::tokio::{
 };
 
 pub struct System {
-    routers: HashMap<TypeId, Box<dyn Router>>,
-    sys_router: broadcast::Sender<SystemMessage>,
+    broadcast_channels: HashMap<TypeId, Box<dyn BroadcastChannel>>,
+    system_channel: broadcast::Sender<SystemMessage>,
     done: Vec<mpsc::Receiver<()>>,
 }
 
 impl System {
     pub fn new() -> Self {
         System {
-            routers: HashMap::new(),
-            sys_router: broadcast::channel(1000).0,
+            broadcast_channels: HashMap::new(),
+            system_channel: broadcast::channel(1000).0,
             done: Vec::new(),
         }
     }
 
     pub async fn add_actor<A: Actor>(&mut self, actor: A) -> Result<ActorAddress<A>, SystemError> {
-        let publish_routers =
-            A::Publishes::setup_routers(self.sys_router.clone(), &mut self.routers)
+        let publish_channels =
+            A::Publishes::setup_channels(self.system_channel.clone(), &mut self.broadcast_channels)
                 .await
                 .map_err(|source| SystemError::AddActorFailure { source })?;
-        let handle_routers = A::Handles::setup_routers(self.sys_router.clone(), &mut self.routers)
-            .await
-            .map_err(|source| SystemError::AddActorFailure { source })?;
+        let handle_channels =
+            A::Handles::setup_channels(self.system_channel.clone(), &mut self.broadcast_channels)
+                .await
+                .map_err(|source| SystemError::AddActorFailure { source })?;
 
-        let (tell_routers, done) = actor
-            .setup_mailboxes(&handle_routers, &publish_routers, self.sys_router.clone())
+        let (direct_channels, done) = actor
+            .setup_mailboxes(
+                &handle_channels,
+                &publish_channels,
+                self.system_channel.clone(),
+            )
             .await
             .map_err(|source| SystemError::AddActorFailure { source })?;
         self.done.extend(done);
 
-        Ok(ActorAddress::new(tell_routers))
+        Ok(ActorAddress::new(direct_channels))
     }
 
     pub async fn add_source<S: 'static + Source + SourceMeta>(
         &mut self,
         source: S,
     ) -> Result<(), SystemError> {
-        let publish_routers =
-            S::Publishes::setup_routers(self.sys_router.clone(), &mut self.routers)
+        let publish_channels =
+            S::Publishes::setup_channels(self.system_channel.clone(), &mut self.broadcast_channels)
                 .await
                 .map_err(|source| SystemError::AddSourceFailure { source })?;
-        let ctx = Context::new(publish_routers);
+        let ctx = Context::new(publish_channels);
         spawn(source.run(ctx));
         Ok(())
     }
 
     pub async fn shutdown(&mut self) -> Result<(), SystemError> {
-        self.sys_router
+        self.system_channel
             .send(SystemMessage::Shutdown)
             .map_err(|source| SystemError::ShutdownError {
                 source: source.into(),
